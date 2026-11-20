@@ -32,7 +32,7 @@ CREATE TABLE service_accounts (
 );
 
 INSERT INTO service_accounts (service_name, username, password, host, notes) VALUES
-('Samba FileShare', 'smbadmin', 'FileShare#2024', 'file-01.internal', 'Read/write access to all shares'),
+('Samba FileShare', 'sysadmin', 'FileShare#2024', 'file-01.internal', 'Public/backups writable; confidential share read-only'),
 ('Redis Cache', '', '', 'admin-01.internal:6379', 'No authentication required'),
 ('Backup SSH', 'backup', 'backup', 'vpn-gw-01.internal', 'Used for automated backups'),
 ('Admin Panel', 'administrator', 'Admin!Panel99', 'admin-01.internal:8080', 'Web admin interface');

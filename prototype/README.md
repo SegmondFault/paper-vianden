@@ -7,4 +7,9 @@ It has been tested locally using a Linux ARM64 Docker engine. AMD64 validation
 and Sysbox integration are pending. It runs its containers on the selected
 Docker engine directly; it does not create the planned outer sandbox.
 
-See ../docs/users.md for commands and ../docs/services.md for coverage.
+See the [user guide](../docs/users.md) for commands and the
+[coverage matrix](../docs/services.md) for available services.
+
+Use the root Dockerfile and ./range launcher. The retained per-service
+Dockerfiles, PowerShell launchers and UPSTREAM.md are upstream reference
+material; they are not the supported Paper Vianden launch path.

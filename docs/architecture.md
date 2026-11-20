@@ -1,6 +1,7 @@
 # Architecture
 
-The target design is one disposable Sysbox system container containing its own
+This document describes the target design, not a deployed implementation.
+It is one disposable Sysbox system container containing its own
 Docker daemon and the complete training network. The outer sandbox is the unit
 of lifecycle and aggregate resource control. Docker Compose defines services and
 segments inside it. A small Python controller owns session creation and cleanup.
@@ -28,6 +29,8 @@ storage budget.
 
 The current prototype under prototype/ implements the inner Linux service
 network only. It does not implement the outer envelope or one-shot lifecycle.
+Its existing down/reset commands save local records automatically; the final
+session's explicit evidence-export policy has not yet been implemented.
 
 ## Design constraints
 

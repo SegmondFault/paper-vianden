@@ -2,6 +2,7 @@
 
 This matrix distinguishes the tested prototype from available upstream material.
 Upstream availability does not imply that a service is integrated or tested here.
+For current endpoints and synthetic credentials, see the [user guide](users.md#find-the-services).
 
 | Capability | Current prototype | Learn-to-hack source / planned work |
 | --- | --- | --- |
@@ -28,7 +29,31 @@ domain controller. Actual AD is a separate capability and is not currently
 included. Wi-Fi radios, mobile hardware and industrial process models are also
 outside the current implementation.
 
+The existing applications are independent training fixtures, not a connected
+business system: the API uses in-memory records, the admin login uses its own
+SQLite database, and the PHP portal does not use the MariaDB customer database.
+Service availability is useful for protocol and administration experiments, but
+does not establish a realistic end-to-end business workflow or traffic baseline.
+
 Week 10's upstream privileged host-ASLR changes must not be copied unchanged
 onto a shared host. Architecture requirements and per-session containment need
 validation before that module is supported. All modules must follow the common
 on-demand lifecycle and leave unrelated host workloads unchanged.
+
+## Read the source exercises
+
+These links open the pinned upstream revision. The guides describe their own
+standalone labs; their launchers do not yet use Paper Vianden's planned envelope.
+
+- [Week 1: setup and packet tools](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week1)
+- [Week 2: ethics](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week2)
+- [Week 3: traffic analysis](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week3)
+- [Week 4: scanning/reporting](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week4)
+- [Week 5: LDAP, SMB, SQL and SNMP](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week5)
+- [Week 6: password exercises](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week6)
+- [Week 7: web applications](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week7)
+- [Week 8: privilege escalation and services](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week8)
+- [Week 9: pivoting](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week9)
+- [Week 10: exploit development](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week10)
+- [Week 11: badge-reader simulation](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week11)
+- [Week 12: phishing/mail simulation](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week12)

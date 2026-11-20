@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Project-scoped mini-range launcher. State and keys stay beside this script."""
+"""Paper Vianden prototype launcher. State and keys stay beside this script."""
 import argparse
 import datetime as dt
 import json

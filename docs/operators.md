@@ -2,9 +2,14 @@
 
 ## Deployment status
 
-Sysbox and the range have not been installed by this project. The prototype is
-not a shared-server installer. No global Docker restart, default-runtime change,
-daemon address-pool change, or host-wide prune is part of the accepted deployment.
+The server currently has a source checkout only. Sysbox and the range have not
+been installed or started by this project. A successful Git clone is not a
+runtime deployment. The prototype is not a shared-server installer.
+
+No global Docker restart, default-runtime change, daemon address-pool change, or
+host-wide prune is part of the accepted deployment. The Sysbox package's standard
+installer may change Docker configuration and restart it; its exact package
+scripts and dependencies must be reviewed before use on the shared server.
 
 ## Proposed installation
 
@@ -21,18 +26,44 @@ execute it as root from an operator-writable checkout.
 
 ## Git deployment
 
-The intended source repository is SegmondFault/paper-vianden. Keep server checkout
-and administrator-owned deployed release separate. The server may fetch source
-with a repository-scoped read-only deploy key. Private key material stays on the
-server and outside the repository.
+The public source repository is [SegmondFault/paper-vianden](https://github.com/SegmondFault/paper-vianden).
+Clone as an ordinary user; this starts no services:
+
+```sh
+git clone --recurse-submodules https://github.com/SegmondFault/paper-vianden.git
+cd paper-vianden
+git status --short
+git log -1 --oneline
+git submodule status
+```
+
+The main branch tracks origin/main. An existing checkout can fetch and update
+explicitly, provided its working tree is clean:
+
+```sh
+git fetch origin
+git log --oneline HEAD..origin/main
+git pull --ff-only
+git submodule update --init --recursive
+```
+
+These commands update source only; they do not install a runtime or start targets.
+If there are local changes or divergent commits, stop and review them rather than
+resetting or overwriting the checkout.
+
+Keep server checkout and administrator-owned deployed release separate. The
+public repository requires no GitHub credential to clone. Where authenticated
+access is used, scope a deploy key to read-only repository access; private key
+material stays on the server and outside the repository.
 
 An update is explicit: fetch, review a selected tag/commit, stage it, validate it,
 then switch the deployed release. Record the deployed commit. An ordinary range
 invocation must not git pull, switch releases or update images automatically.
 No cron job, boot hook or login hook should start the range.
 
-Use git submodule update --init --recursive to obtain the pinned course sources.
-Updating that pin is a reviewed source change, not a session-start operation.
+The submodule command obtains the course revision recorded by Paper Vianden;
+do not add --remote for an ordinary checkout/update. Changing its recorded pin
+is a reviewed source change, not a session-start operation.
 
 ## Resources and host protection
 

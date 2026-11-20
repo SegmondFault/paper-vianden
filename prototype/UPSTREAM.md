@@ -1,3 +1,7 @@
+> Paper Vianden reference copy: the original upstream README is retained below.
+> Its launch commands, published ports and fixed addresses describe upstream
+> VulnCastle. Use the [Paper Vianden user guide](../docs/users.md) for this prototype.
+
 # VulnCastle
 
 Intentionally vulnerable multi-host lab environment for offensive security training, built with Docker Compose.

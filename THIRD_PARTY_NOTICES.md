@@ -12,8 +12,8 @@ logging. This repository is a separate project rather than an upstream fork.
 VulnCastle declares MIT in its README. No separate licence text or copyright
 notice was present in the inspected upstream tree. We retain that declaration
 and attribution without presenting the imported code as original Paper Vianden
-authorship. Clarification of upstream's full notice should precede a public
-combined release.
+authorship. The root licence does not replace that upstream declaration or
+assert authorship of the imported applications.
 
 ## Ethical Hacking Docker Labs
 

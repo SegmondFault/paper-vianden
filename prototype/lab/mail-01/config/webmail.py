@@ -14,7 +14,7 @@ USERS = {
 
 EMAILS = [
     {"from": "ceo@acme-corp.local", "to": "admin@acme-corp.local",
-     "subject": "VPN Credentials", "body": "New VPN creds: vpnuser / Vpn$ecure99\nGateway: vpn-gw-01.internal"},
+     "subject": "SSH Gateway Credentials", "body": "Gateway SSH account: sysadmin / admin123\nGateway: vpn-gw-01.internal"},
     {"from": "devops@acme-corp.local", "to": "sysadmin@acme-corp.local",
      "subject": "DB Migration", "body": "Production DB migrated.\nHost: db-01.internal\nUser: root\nPass: S3cretDB!2024"},
     {"from": "hr@acme-corp.local", "to": "admin@acme-corp.local",
