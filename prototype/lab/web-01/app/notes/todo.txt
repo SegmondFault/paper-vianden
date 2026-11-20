@@ -1,0 +1,6 @@
+TODO:
+- [ ] Fix file upload validation (low priority)
+- [ ] Update PHP version
+- [ ] Remove debug endpoints
+- [ ] Rotate database credentials
+- [ ] Set up proper backup system (currently using /opt/backup.sh)

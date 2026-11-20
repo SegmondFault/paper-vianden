@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""Project-scoped mini-range launcher. State and keys stay beside this script."""
+import argparse
+import datetime as dt
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent
+STATE = ROOT / "state"
+PROJECT = os.environ.get("RANGE_PROJECT", "paper-vianden-prototype")
+DOCKER = ["docker"]
+if os.environ.get("RANGE_DOCKER_CONTEXT"):
+    DOCKER += ["--context", os.environ["RANGE_DOCKER_CONTEXT"]]
+
+
+def compose(full=True):
+    args = DOCKER + ["compose", "--project-name", PROJECT,
+                     "--project-directory", str(ROOT), "-f", str(ROOT / "docker-compose.yml")]
+    if full:
+        args += ["--profile", "extended"]
+    return args
+
+
+def run(args, capture=False, check=True, **kwargs):
+    env = os.environ.copy()
+    env.setdefault("COMPOSE_PARALLEL_LIMIT", "2")
+    return subprocess.run(args, cwd=ROOT, env=env, text=True, check=check,
+                          capture_output=capture, **kwargs)
+
+
+def init():
+    STATE.mkdir(mode=0o700, exist_ok=True)
+    STATE.chmod(0o700)
+    for name in ("entry", "blue"):
+        key = STATE / name
+        if not key.exists():
+            if key.with_suffix(".pub").exists():
+                raise SystemExit(f"Refusing to replace an incomplete key pair: {key}")
+            run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C",
+                 f"{PROJECT}-{name}", "-f", str(key)])
+        if not key.with_suffix(".pub").is_file():
+            raise SystemExit(f"Missing public key for {key}")
+        key.chmod(0o600)
+    authorized = STATE / "authorized_keys"
+    if not authorized.exists():
+        authorized.write_text((STATE / "entry.pub").read_text())
+        authorized.chmod(0o600)
+
+
+def model(full=True):
+    return json.loads(run(compose(full) + ["config", "--format", "json"], capture=True).stdout)
+
+
+def validate(cfg):
+    """Fail before startup if an edit removes the project's containment defaults."""
+    for name, network in cfg.get("networks", {}).items():
+        if name != "entry" and not network.get("internal"):
+            raise SystemExit(f"Network {name} permits external egress")
+    for name, service in cfg["services"].items():
+        if (service.get("privileged") or service.get("network_mode") or service.get("devices")
+                or service.get("pid") == "host" or service.get("ipc") == "host"):
+            raise SystemExit(f"Host-level access is not permitted for {name}")
+        if not all(float(service.get(k, 0)) > 0 for k in ("mem_limit", "cpus", "pids_limit")):
+            raise SystemExit(f"Resource ceilings missing for {name}")
+        for port in service.get("ports", []):
+            if name != "entry" or port.get("host_ip") != "127.0.0.1":
+                raise SystemExit(f"Unexpected published port on {name}")
+        if "entry" in service.get("networks", {}) and name != "entry":
+            raise SystemExit(f"Only the entry relay may join the entry bridge: {name}")
+        if name == "entry" and (not service.get("read_only") or service.get("user") != "65534:65534"
+                                or "ALL" not in service.get("cap_drop", [])):
+            raise SystemExit("Entry relay must be unprivileged and read-only")
+        for mount in service.get("volumes", []):
+            if mount.get("type") == "bind":
+                source = Path(mount["source"]).resolve()
+                if not source.is_relative_to(STATE.resolve()) or not mount.get("read_only"):
+                    raise SystemExit(f"Unexpected host mount on {name}")
+
+
+def check(full=True):
+    # Ordinary service checks, not exploit traffic. Run from the admin workstation.
+    checks = [
+        ("portal", ["curl", "--connect-timeout", "5", "--max-time", "10", "-fsS", "http://web-01.dmz/"]),
+        ("gateway administration", ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "vpn-gw-01.internal", "hostname"]),
+        ("file-server administration", ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "file-01.internal", "hostname"]),
+        ("portal administration", ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "web-01.dmz", "hostname"]),
+        ("public file share", ["smbclient", "//file-01.internal/public", "-N", "-c", "ls"]),
+        ("synthetic database", ["env", "MYSQL_PWD=S3cretDB!2024", "mariadb", "--skip-ssl",
+          "--connect-timeout=5", "-h", "db-01.internal", "-u", "root", "-N", "-e", "SELECT COUNT(*) FROM acme_corp.customers"]),
+        ("no default external route", ["python3", "-c",
+          "import subprocess; r=subprocess.check_output(['ip','-4','route','show','default']); assert not r, r"]),
+    ]
+    if full:
+        checks += [
+            ("webmail", ["curl", "-fsS", "http://mail-01.dmz:8025/"]),
+            ("internal API", ["curl", "-fsS", "http://app-01.internal:3000/api/health"]),
+            ("admin panel", ["curl", "-fsS", "http://admin-01.internal:8080/"]),
+            ("Redis socket", ["nc", "-z", "-w", "3", "admin-01.internal", "6379"]),
+        ]
+    for label, command in checks:
+        command = ["timeout", "20"] + command
+        result = run(compose(full) + ["exec", "-T", "defender"] + command, capture=True, check=False)
+        if result.returncode:
+            print(f"FAIL: {label}\n{result.stdout}\n{result.stderr}", file=sys.stderr)
+            raise SystemExit(1)
+        print(f"PASS: {label}")
+
+
+def collect():
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    out = ROOT / "runs" / stamp
+    out.mkdir(parents=True)
+    result = run(compose(True) + ["logs", "--no-color", "--timestamps"], capture=True, check=False)
+    (out / "services.log").write_text(result.stdout + result.stderr)
+    result = run(compose(True) + ["ps", "--all", "--format", "json"], capture=True, check=False)
+    (out / "containers.json").write_text(result.stdout)
+    result = run(["git", "rev-parse", "HEAD"], capture=True, check=False)
+    (out / "source-commit.txt").write_text(result.stdout)
+    result = run(["git", "status", "--short"], capture=True, check=False)
+    (out / "source-status.txt").write_text(result.stdout)
+    result = run(compose(True) + ["config", "--format", "json"], capture=True, check=False)
+    (out / "compose.json").write_text(result.stdout)
+    print(f"Saved run records: {out}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.set_defaults(full=True, no_build=False)
+    commands = parser.add_subparsers(dest="command", required=True)
+    for name in ("init", "config", "build", "up", "down", "reset", "status", "stats",
+                 "shell", "exec", "check", "collect", "login"):
+        command = commands.add_parser(name)
+        if name in ("config", "build", "up", "reset", "check"):
+            profiles = command.add_mutually_exclusive_group()
+            profiles.add_argument("--full", dest="full", action="store_true",
+                                  help="All seven targets (the default)")
+            profiles.add_argument("--minimal", dest="full", action="store_false",
+                                  help="Reduced four-target set for troubleshooting")
+            command.set_defaults(full=True)
+        if name == "up":
+            command.add_argument("--no-build", action="store_true")
+        if name == "down":
+            command.add_argument("--volumes", action="store_true", help="Also discard this project's data volumes")
+        if name in ("shell", "exec"):
+            command.add_argument("service", **({"nargs": "?", "default": "defender"} if name == "shell" else {}))
+        if name in ("exec", "login"):
+            command.add_argument("remainder", nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    rest = getattr(args, "remainder", [])
+    cmd = args.command
+    if cmd == "init":
+        init()
+        print("Created project-local access keys under state/.")
+    elif cmd == "config":
+        cfg = model(args.full)
+        validate(cfg)
+        run(compose(args.full) + ["config", "--quiet"])
+        services = cfg["services"]
+        memory = sum(int(s.get("mem_limit", 0)) for s in services.values())
+        cpus = sum(float(s.get("cpus", 0)) for s in services.values())
+        print(f"{len(services)} services; summed RAM ceilings {memory / 2**20:.0f} MiB; CPU ceilings {cpus:g}")
+        print("These ceilings exclude host/engine overhead; idle usage is measured with ./range stats.")
+    elif cmd in ("build", "up"):
+        init()
+        validate(model(args.full))
+        if cmd == "build":
+            run(compose(args.full) + ["build"])
+        else:
+            flags = ["--no-build", "--pull", "never"] if args.no_build else ["--build"]
+            run(compose(args.full) + ["up", "-d", "--wait", "--wait-timeout", "120"] + flags)
+    elif cmd == "down":
+        collect()
+        run(compose(True) + ["down"] + (["--volumes"] if args.volumes else []))
+    elif cmd == "reset":
+        validate(model(args.full))
+        collect()
+        # Only this Compose project's containers and volumes are reset.
+        run(compose(True) + ["down", "--volumes"])
+        port = os.environ.get("BLUE_PORT", "12222")
+        known = STATE / "known_hosts"
+        if known.exists():
+            run(["ssh-keygen", "-R", f"[127.0.0.1]:{port}", "-f", str(known)], capture=True, check=False)
+        run(compose(args.full) + ["up", "-d", "--no-build", "--pull", "never",
+                                  "--wait", "--wait-timeout", "120"])
+    elif cmd == "status":
+        run(compose(True) + ["ps", "--all"])
+    elif cmd == "stats":
+        ids = run(compose(True) + ["ps", "-q"], capture=True).stdout.split()
+        if ids:
+            run(DOCKER + ["stats", "--no-stream"] + ids)
+        else:
+            print("No containers running for this project.")
+    elif cmd in ("shell", "exec"):
+        service = args.service
+        if service not in model(True)["services"]:
+            raise SystemExit("Unknown range service")
+        if cmd == "shell":
+            run(compose(True) + ["exec", service, "bash"])
+        else:
+            if not rest:
+                raise SystemExit("Usage: ./range exec SERVICE COMMAND [ARG ...]")
+            run(compose(True) + ["exec", "-T", service] + rest)
+    elif cmd == "check":
+        check(args.full)
+    elif cmd == "collect":
+        collect()
+    elif cmd == "login":
+        init()
+        port = os.environ.get("BLUE_PORT", "12222")
+        run(["ssh", "-i", str(STATE / "entry"), "-p", port,
+             "-o", f"UserKnownHostsFile={STATE / 'known_hosts'}",
+             "-o", "StrictHostKeyChecking=accept-new", "-o", "ConnectTimeout=10", "root@127.0.0.1"] + rest)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except subprocess.CalledProcessError as error:
+        raise SystemExit(error.returncode)

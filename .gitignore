@@ -1,0 +1,16 @@
+**/state/
+**/runs/
+**/__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.DS_Store
+node_modules/
+artifacts/
+local/
+*.log
+*.deb
+*.tar
+*.tar.gz
+*.tar.zst

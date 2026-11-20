@@ -1,0 +1,9 @@
+Welcome to ACME Corp!
+
+Please check the internal wiki for onboarding docs.
+Contact sysadmin@acme-corp.local for access requests.
+
+DB credentials for dev environment:
+  Host: db-01.internal
+  User: app_user
+  Pass: S3cretDB!2024

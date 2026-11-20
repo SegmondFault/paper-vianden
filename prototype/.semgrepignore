@@ -1,0 +1,3 @@
+# VulnCastle - Intentionally vulnerable lab environment
+# All code under lab/ contains deliberate security vulnerabilities for educational purposes
+lab/

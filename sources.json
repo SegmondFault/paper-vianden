@@ -1,0 +1,30 @@
+{
+  "project": "Paper Vianden",
+  "original_work_license": "MIT",
+  "sources": [
+    {
+      "name": "VulnCastle",
+      "url": "https://github.com/0x6d61/vulncastle",
+      "revision": "9f3372844cf4171e79af74a6945a3b93b83850f8",
+      "usage": "Adapted Linux service prototype under prototype/",
+      "license_declaration": "MIT in upstream README; no standalone licence file observed",
+      "notice": "prototype/UPSTREAM.md"
+    },
+    {
+      "name": "Ethical Hacking Docker Labs",
+      "url": "https://github.com/michael-borck/ethical-hacking-docker-labs",
+      "revision": "60d981e509ea186be0c31d1ea1cbb536fa6f387e",
+      "usage": "Pinned source submodule; combined range integration pending",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Michael Borck",
+      "notice": "upstream/ethical-hacking-docker-labs/LICENSE"
+    },
+    {
+      "name": "Sysbox",
+      "url": "https://github.com/nestybox/sysbox",
+      "version_reviewed": "0.7.1",
+      "license": "Apache-2.0",
+      "usage": "Proposed outer runtime; not bundled or installed"
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+name: ${RANGE_PROJECT:-paper-vianden-prototype}
+
+x-node: &node
+  init: true
+  restart: "no"
+  pids_limit: 128
+  dns: [127.0.0.1]
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: "3"}
+  volumes:
+    - ./state/blue.pub:/run/blue-team.pub:ro
+
+services:
+  web-01:
+    <<: *node
+    build: {context: ., target: web}
+    hostname: web-01
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    networks:
+      dmz:
+        aliases: [web-01.dmz]
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1/]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+  vpn-gw-01:
+    <<: *node
+    build: {context: ., target: gateway}
+    hostname: vpn-gw-01
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    cap_add: [NET_ADMIN]
+    networks:
+      dmz:
+        aliases: [vpn-gw-01.dmz]
+      internal:
+        aliases: [vpn-gw-01.internal]
+    healthcheck:
+      test: [CMD, nc, -z, 127.0.0.1, "22"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+  db-01:
+    init: true
+    dns: [127.0.0.1]
+    restart: "no"
+    build: {context: ., target: database}
+    hostname: db-01
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 0.75
+    pids_limit: 256
+    command: [--innodb-buffer-pool-size=128M, --max-connections=30, --general-log=1, --log-output=TABLE]
+    networks:
+      internal:
+        aliases: [db-01.internal]
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+    healthcheck:
+      test: [CMD, healthcheck.sh, --connect, --innodb_initialized]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 9
+  file-01:
+    <<: *node
+    build: {context: ., target: fileserver}
+    hostname: file-01
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    networks:
+      internal:
+        aliases: [file-01.internal]
+    healthcheck:
+      test: [CMD, nc, -z, 127.0.0.1, "445"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+  defender:
+    init: true
+    dns: [127.0.0.1]
+    restart: "no"
+    build: {context: ., target: workstation}
+    hostname: defender
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    volumes:
+      - ./state/authorized_keys:/run/entry.pub:ro
+      - ./state/blue:/root/.ssh/id_ed25519:ro
+    networks: [management, dmz, internal]
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+    healthcheck:
+      test: [CMD, nc, -z, 127.0.0.1, "22"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  entry:
+    init: true
+    restart: "no"
+    build: {context: ., target: entry}
+    user: "65534:65534"
+    read_only: true
+    cap_drop: [ALL]
+    dns: [127.0.0.1]
+    mem_limit: 32m
+    memswap_limit: 32m
+    cpus: 0.1
+    pids_limit: 32
+    depends_on:
+      defender: {condition: service_healthy}
+    ports:
+      - "127.0.0.1:${BLUE_PORT:-12222}:10222"
+    networks: [entry, management]
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
+    healthcheck:
+      test: [CMD, nc, -z, 127.0.0.1, "10222"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+  mail-01:
+    <<: *node
+    profiles: [extended]
+    build: {context: ., target: webmail}
+    hostname: mail-01
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.25
+    networks:
+      dmz:
+        aliases: [mail-01.dmz]
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:8025/]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+  app-01:
+    <<: *node
+    profiles: [extended]
+    build: {context: ., target: api}
+    hostname: app-01
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    networks:
+      internal:
+        aliases: [app-01.internal]
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:3000/api/health]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+  admin-01:
+    <<: *node
+    profiles: [extended]
+    build: {context: ., target: admin}
+    hostname: admin-01
+    mem_limit: 192m
+    memswap_limit: 192m
+    cpus: 0.5
+    networks:
+      internal:
+        aliases: [admin-01.internal]
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS http://127.0.0.1:8080/ >/dev/null && redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+# Docker allocates per-project subnets. No host routing or fixed IP changes.
+# Only the unprivileged relay joins the entry bridge. Target/workstation networks
+# are internal; encrypted SSH is relayed into the workstation, without target ports.
+networks:
+  entry: {}
+  management: {internal: true}
+  dmz: {internal: true}
+  internal: {internal: true}
