@@ -33,7 +33,7 @@ STAGE_DIR = '/tmp/report-cache'
 STAGE_FILE = STAGE_DIR+'/export.jsonl'
 EXFIL_PERIOD = 675  # Simulated seconds; carrier for the timing-analysis exercise.
 DEFAULT_SEED = 20260112
-EXFIL_JITTER_LIMIT = .42  # Phase jitter, not cumulative interval drift.
+EXFIL_JITTER_LIMIT = .28  # Balanced phase jitter, not cumulative interval drift.
 
 
 def simulation_seed(value):
@@ -64,14 +64,17 @@ def office_modulation(seed, elapsed):
 def exfil_offsets(seed=DEFAULT_SEED):
     """32 reproducible, jittered slots; retain a carrier without clockwork gaps.
 
-    Independently perturb each nominal slot instead of accumulating random
-    delays. The latter would wash out the carrier. The phase bound preserves
-    ordering and keeps every synthetic transfer inside hours 16–22.
+    Stratify phase offsets across a bounded uniform distribution, then shuffle
+    their slot assignment. This avoids small-sample Gaussian draws washing out
+    the intended carrier for particular seeds. It does not guarantee a unique
+    spectral peak in every capture. Bounds preserve ordering and hours 16–22.
     """
     rng = rng_for(seed, 'dns.schedule')
+    phases = [((index+rng.random())/32-.5)*2*EXFIL_JITTER_LIMIT for index in range(32)]
+    rng.shuffle(phases)
     anchor = 16*3600+EXFIL_JITTER_LIMIT*EXFIL_PERIOD
-    return tuple(round(anchor+i*EXFIL_PERIOD+EXFIL_PERIOD*max(-EXFIL_JITTER_LIMIT,
-        min(EXFIL_JITTER_LIMIT, rng.gauss(0, .25)))) for i in range(32))
+    return tuple(round(anchor+i*EXFIL_PERIOD+EXFIL_PERIOD*phase)
+                 for i, phase in enumerate(phases))
 
 
 def clock_speed(value):

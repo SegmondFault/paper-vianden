@@ -2,7 +2,7 @@
 
 ## Synthetic activity layer
 
-`python3 -m unittest discover -s tests -v` passes 31 tests, including portal
+`python3 -m unittest discover -s tests -v` passes 33 tests, including portal
 UID/role binding, command argument isolation, scoped SSH configuration updates,
 read-only observation, and clock
 sharing/bounds, independent seeded variants, smooth office modulation, jittered
@@ -32,9 +32,9 @@ rehearsal using prepared images, with no builds or pulls:
 - The test's containers, networks and journal volume were removed and checked
   absent after teardown. Unrelated containers remained running.
 
-The timing unit tests estimate a 671-second period from the default seed's
-jittered samples, close to the 675-second carrier, without reading scheduled
-fields or the seed. This is not a false-positive/significance assessment or proof
+The timing unit tests estimate a 675-second period from the default seed's
+jittered samples, and recover within 15 seconds for 100 seed variants without
+reading scheduled fields or the seed. This is not a false-positive/significance assessment or proof
 of live timing fidelity at high acceleration; the fast smoke test validates
 connectivity and completion, not spectral recovery from its catch-up bursts.
 

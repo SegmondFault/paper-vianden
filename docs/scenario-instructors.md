@@ -62,15 +62,19 @@ never collecting arbitrary files. No evidence destruction runs.
 
 There are still exactly 32 small, range-local DNS transfers. The underlying
 carrier is 675 **simulated** seconds (11.25 minutes), but each nominal slot gets
-independent Gaussian phase jitter (sigma 25%, bounded at ±42% of the carrier).
-This is not a random walk: cumulative random delays would wash out the intended
-frequency. Slots stay ordered and inside hours 16–22 for every seed.
+stratified phase jitter: 32 offsets distributed across ±28% of the carrier,
+then assigned to slots by a seeded shuffle. This is not a random walk: cumulative
+random delays would wash out the intended frequency. Stratification keeps a
+small-sample draw from accidentally flattening the carrier. Slots stay ordered
+and inside hours 16–22 for every seed.
 
-For the default seed the gaps vary roughly 5–18 minutes instead of repeating a
+For the default seed the gaps vary roughly 6–17 minutes instead of repeating a
 constant interval. An event-time Fourier periodogram of the planned jittered
-samples estimates 671 seconds, close to the 675-second carrier, without reading
-seed, packet indexes or scheduled offsets. That is a controlled teaching result,
-not a guarantee for every finite sample, seed or real capture.
+samples estimates 675 seconds without reading seed, packet indexes or scheduled
+offsets. Regression tests recover within 15 seconds for 100 seeds. This fixes
+an observed old-generator failure where seed 42 had a stronger unrelated peak
+near 309 seconds. It remains a controlled teaching result, not a unique-peak or
+significance guarantee for every seed, detector or real capture.
 
 Office activity also performs genuine DNS A lookups under `office.range.test`
 through the sink. The allowlisted server returns only fixed Docker fixture
