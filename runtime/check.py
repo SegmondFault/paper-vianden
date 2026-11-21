@@ -39,9 +39,12 @@ def mail():
     with imaplib.IMAP4('mail.internal', 143, timeout=8) as imap:
         imap.login('sysadmin', 'admin123')
         assert imap.select('INBOX')[0] == 'OK'
-    with poplib.POP3('mail.internal', 110, timeout=8) as pop:
+    pop = poplib.POP3('mail.internal', 110, timeout=8)
+    try:
         pop.user('sysadmin'); pop.pass_('admin123')
         assert pop.stat()[0] >= 1
+    finally:
+        pop.quit()
 
 
 def ftp():
