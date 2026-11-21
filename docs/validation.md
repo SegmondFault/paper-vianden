@@ -1,51 +1,59 @@
-# Standard DNS clients
-
-The suite passes 49 unit tests, including bounded EDNS version-0/cookie queries
-used by standard `dig` clients. The sink remains non-forwarding and range-local.
-Malformed additional records are rejected. This was found while exercising the
-fresh-DNS logging check after startup cleanup.
-
-# Live-view cleanup
-
-The current suite passes 48 unit tests. Startup now clears all four role views,
-findings, histories, target logs, SQL general logs and readiness-probe mail before
-starting telemetry/actors. Unit coverage includes preserving active sink log
-file descriptors while removing their old contents, fresh run IDs and retaining
-saved exports outside the live cleanup.
-
-Native four-mode validation passed on the preceding role release: scripted /
-scripted, red LLM / scripted, red LLM / green LLM, and scripted / green LLM. Each
-mode passed all eight ordinary-work probes, role gates, private findings export,
-reset isolation and clean stop. No role login restarted the stopped exercise.
-
-# External team modes
-
-The suite now includes 44 unit tests. Human-selected red/green mode gates,
-clock-only normal traffic, and account-role bindings are covered. The original
-native response rehearsal passed all eight ordinary-work checks both before and
-after containment, prevented the simulated objective, downloaded its findings
-archive, and released the human lease. External-role mode checks use scripted
-SSH clients, without running models inside the range.
-
-# Demo ownership and central evidence changes
-
-The expanded suite passes 41 unit tests, covering human reservations/token
-isolation, expiration, parallel tool limits, export-before-reset ordering,
-fail-closed deliberate teardown, evidence cursors/deduplication and safe archives.
-
-Isolated Docker rehearsals exercised both normal and contained scenarios:
-normal completed all 47 events and 32 DNS transfers; locking the file-host fixture
-account through blue prevented the objective and all DNS transfers. Findings and
-central observations were included in the export. Six ordinary protocols passed;
-FTP/mail hit verified Rosetta errors on the ARM Mac and are not counted as passes.
-The native portal acceptance script requires all eight ordinary-work checks.
-
-The SSH acceptance client and containment logic are scripted. They validate the
-interface an external SOC architecture uses; they do not measure an AI model.
-
----
-
 # Validation record
+
+## Current demo acceptance — 21 November 2026
+
+The installed runtime is revision `1d19ea8`. Documentation-only updates record
+these results without changing the installed executable code.
+
+**49 unit tests pass**, covering human lease exclusivity/expiry, UID/role binding,
+parallel SSH slots, human-selected traffic modes, clock-only green mode, cursor
+reset/gap handling, SQL deduplication, archive safety, startup cleanup and EDNS
+queries from standard DNS clients.
+
+Native Linux AMD64 checks through the actual VPS SSH portals passed:
+
+- Blue, red, green and human accounts enter their fixed workstations. The old
+  unsuffixed agent login is retired. Red/green logins are denied unless their
+  LLM modes were selected by the human. Agents cannot invoke human controls.
+- A competing human cannot claim an existing reservation, including through the
+  same Unix account. Concurrent blue SSH tool calls work within the shared run.
+- All four combinations pass: scripted/scripted, red LLM/scripted, red LLM/green
+  LLM, and scripted/green LLM. Automatic malicious actions stay off in red LLM
+  mode; scripted employee actions stay off in green LLM mode, with the clock alive.
+- All eight ordinary-work probes pass in each mode. The scripted response
+  rehearsal locked the intruder fixture account through the agent SSH interface,
+  prevented its objective and kept all eight ordinary workflows working.
+- White runs as UID 65534 with zero effective capabilities. Agent workstations
+  have no host Docker socket or private instructor journal; red/green have no
+  blue administrator key.
+- Private blue/red/green findings are included in bounded downloadable archives,
+  including files written with umask 077. Exports survive reset and teardown.
+- The clean-start rehearsal planted a unique prior-case marker in all four role
+  histories, all agent findings and a target authentication log. After reset,
+  live views contained no marker, the run identifier changed and startup-probe
+  mail was empty. Saved exports still contained the earlier findings.
+- A standard `dig` query produced fresh DNS evidence after cleanup, confirming
+  that active sink log descriptors survived the wipe. All eight ordinary-work
+  probes still passed after reset.
+- Release leaves the range stopped with no active state or Sysbox helpers.
+  Agent login attempts do not start a new exercise. The original host Docker
+  and containerd PID/start/restart state remained unchanged throughout.
+
+Reproduce with `tools/rehearse_demo.py`, `tools/rehearse_roles.py` and
+`tools/rehearse_clean_start.py`, using private local credentials and pinned host
+keys. Reports/archives live under ignored `local/` paths, never in public Git.
+
+These are scripted acceptance clients. They verify the interface used by an
+external SOC architecture, not an AI model's judgement or adversarial robustness.
+No provider reboot/power-loss test or multi-user load benchmark was performed.
+Uncatchable termination or host failure can interrupt export. Archive manifests
+report entries omitted by the documented size/file limits.
+
+## Earlier validation records
+
+The entries below describe earlier revisions and development-platform checks.
+The current native acceptance results above supersede their older test counts.
+
 
 ## Synthetic activity layer
 
