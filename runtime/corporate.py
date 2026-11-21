@@ -83,7 +83,7 @@ def prepare(compose):
         '    logging: {driver: json-file, options: {max-size: 2m, max-file: "2"}}',
         'networks:']
     for zone,subnet in SUBNETS.items():
-        lines += ['  '+zone+':', '    internal: false', '    driver_opts: {com.docker.network.bridge.enable_ip_masquerade: "false"}', '    ipam: {config: [{subnet: '+subnet+'}]}']
+        lines += ['  '+zone+':', '    internal: false', '    driver_opts: {com.docker.network.bridge.enable_ip_masquerade: "false", com.docker.network.bridge.gateway_mode_ipv4: routed}', '    ipam: {config: [{subnet: '+subnet+'}]}']
     overlay=ROOT/'prototype/corporate.generated.yaml'; overlay.write_text('\n'.join(lines)+'\n')
     (CONFIG/'assets.json').write_text(json.dumps(inventory)+'\n')
     return assignments, overlay
