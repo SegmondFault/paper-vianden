@@ -9,6 +9,10 @@ import json
 import os
 from pathlib import Path
 import platform
+import pty
+import pwd
+import select
+import termios
 import shutil
 import signal
 import subprocess
@@ -25,6 +29,8 @@ DOCKER = ['/usr/bin/docker', '--host', 'unix://'+str(SOCKET)]
 ENV = {'PATH': str(ROOT/'runtime/bin')+':/usr/sbin:/usr/bin:/sbin:/bin',
        'HOME': '/root', 'DOCKER_HOST': 'unix://'+str(SOCKET),
        'DOCKER_TMPDIR': str(MOUNT/'tmp')}
+OWNER_UNIT = 'paper-vianden-owner.service'
+PORTAL_CONFIG = Path('/etc/paper-vianden/portals.json')
 INNER = ['docker', 'compose', '-p', 'paper-vianden', '--profile', 'extended',
          '-f', '/opt/paper-vianden/prototype/docker-compose.yml',
          '-f', '/opt/paper-vianden/compose.yaml']
@@ -90,7 +96,96 @@ def trusted_install():
             raise RuntimeError('Untrusted runtime binary: '+str(path))
 
 
-def join(role, name=None):
+def join_argv(role, name, execute=None, tty=True):
+    flags = ['-i']+(['-t'] if tty else [])
+    shell = ['bash'] if execute is None else ['bash', '-lc', execute]
+    if role == 'control':
+        return DOCKER+['exec']+flags+[name]+shell
+    service = {'blue': 'defender', 'red': 'red', 'white': 'white'}[role]
+    return DOCKER+['exec']+flags+[name]+INNER+['exec']+([] if tty else ['-T'])+[service]+shell
+
+
+def portal_role(config, uid, username):
+    record = config.get('accounts', {}).get(username, {})
+    if record.get('uid') != uid or record.get('role') not in ('blue', 'white'):
+        raise RuntimeError('This account has no workstation portal permission')
+    return record['role']
+
+
+def portal(execute=None):
+    trusted_install()
+    for path in (PORTAL_CONFIG.parent, PORTAL_CONFIG):
+        info = path.lstat()
+        if path.is_symlink() or info.st_uid != 0 or info.st_mode & 0o022:
+            raise RuntimeError('Untrusted portal configuration')
+    uid = int(os.environ.get('SUDO_UID', '-1'))
+    if uid <= 0:
+        raise RuntimeError('Portal requires an authenticated sudo caller')
+    role = portal_role(json.loads(PORTAL_CONFIG.read_text()), uid, pwd.getpwuid(uid).pw_name)
+    RUNTIME.mkdir(mode=0o700, exist_ok=True)
+    with (RUNTIME/'portal-start.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        active = RUNTIME/'active.json'
+        ready = active.exists() and json.loads(active.read_text()).get('state') == 'ready'
+        if not ready:
+            command(['/usr/bin/systemctl', 'start', '--no-block', OWNER_UNIT])
+    for attempt in range(900):
+        active = RUNTIME/'active.json'
+        if active.exists() and json.loads(active.read_text()).get('state') == 'ready':
+            join(role, execute=execute or None)
+            return
+        if attempt > 5 and capture(['/usr/bin/systemctl', 'show', '--property=ActiveState',
+                                    '--value', OWNER_UNIT]) in ('failed', 'inactive'):
+            raise RuntimeError('Workstation startup failed; contact the administrator')
+        if attempt % 30 == 0:
+            print('Preparing workstation; please wait...', file=sys.stderr, flush=True)
+        time.sleep(1)
+    raise RuntimeError('Workstation startup timed out')
+
+
+def serve(args):
+    """Keep a private owner terminal alive independently of participant SSH."""
+    trusted_install()
+    master, slave = pty.openpty()
+    process = None
+    def terminal():
+        os.setsid()
+        fcntl.ioctl(slave, termios.TIOCSCTTY, 0)
+    try:
+        process = subprocess.Popen(['/usr/bin/python3', '-I', str(ROOT/'pv.py'), 'run',
+            '--seed', str(args.seed), '--clock-speed', str(args.clock_speed)],
+            stdin=slave, stdout=slave, stderr=slave, env=ENV, preexec_fn=terminal)
+        os.close(slave)
+        slave = None
+        while process.poll() is None:
+            readable, _, _ = select.select([master], [], [], 1)
+            if readable:
+                try:
+                    data = os.read(master, 65536)
+                except OSError:
+                    break
+                if not data:
+                    break
+                sys.stdout.buffer.write(data)
+                sys.stdout.buffer.flush()
+        code = process.wait(timeout=30)
+        if code:
+            raise RuntimeError('Managed workstation owner exited with status '+str(code))
+    finally:
+        subprocess.run(['/usr/bin/systemctl', 'stop', 'paper-vianden-session.service'], env=ENV)
+        if process is not None and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+        os.close(master)
+        if slave is not None:
+            os.close(slave)
+
+
+def join(role, name=None, execute=None):
     trusted_install()
     if name is None:
         if subprocess.run(['/usr/bin/systemctl', 'is-active', '--quiet',
@@ -105,11 +200,7 @@ def join(role, name=None):
         name = active['name']
         if not name.startswith('paper-vianden-') or not name.removeprefix('paper-vianden-').isalnum():
             raise RuntimeError('Invalid session identity')
-    if role == 'control':
-        command(DOCKER+['exec', '-it', name, 'bash'])
-    else:
-        service = 'defender' if role == 'blue' else 'red'
-        command(DOCKER+['exec', '-it', name]+INNER+['exec', service, 'bash'])
+    command(join_argv(role, name, execute, sys.stdin.isatty() and sys.stdout.isatty()))
 
 
 def session(args):
@@ -141,7 +232,7 @@ def session(args):
         own_group = next(line.split('::', 1)[1].strip() for line in
                          Path('/proc/self/cgroup').read_text().splitlines() if line.startswith('0::'))
         unit = own_group.rsplit('/', 1)[-1]
-        if unit.endswith('.scope'):
+        if unit.endswith('.scope') or unit == OWNER_UNIT:
             properties.append('--property=BindsTo='+unit)
         service = ['/usr/bin/systemd-run', '--quiet', '--collect', '--wait',
                    '--unit=paper-vianden-session', '--service-type=exec',
@@ -355,14 +446,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
     run = sub.add_parser('run', help='Start one foreground session; destroy it on exit')
-    run.add_argument('--role', choices=['blue', 'red'], default='blue')
+    run.add_argument('--role', choices=['blue', 'red', 'white'], default='blue')
     run.add_argument('--check', action='store_true', help='Check services then destroy the session')
     run.add_argument('--clock-speed', type=scenario_speed, default=1.0,
                      help='Scenario seconds per real second, 1–3600 (default: 1)')
     run.add_argument('--seed', type=scenario_seed, default=20260112,
                      help='Reproducible behaviour variant, unsigned 32-bit integer')
     attach = sub.add_parser('join', help='Join the active session; never starts a range')
-    attach.add_argument('--role', choices=['blue', 'red', 'control'], default='blue')
+    attach.add_argument('--role', choices=['blue', 'red', 'white', 'control'], default='blue')
+    portal_parser = sub.add_parser('portal', help='Account-bound SSH workstation portal')
+    portal_parser.add_argument('--exec', dest='execute', default=None)
+    managed = sub.add_parser('serve', help='Administrator-managed owner terminal')
+    managed.add_argument('--seed', type=scenario_seed, default=20260112)
+    managed.add_argument('--clock-speed', type=scenario_speed, default=1.0)
     sub.add_parser('status', help='Show session state without starting anything')
     sub.add_parser('stop', help='Stop only the active Paper Vianden session')
     args = parser.parse_args()
@@ -388,11 +484,16 @@ def main():
     if args.command == 'join':
         join(args.role)
         return
+    if args.command == 'portal':
+        portal(args.execute)
+        return
     def interrupted(signum, frame):
         raise KeyboardInterrupt
     for sig in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM]:
         signal.signal(sig, interrupted)
-    if inner:
+    if args.command == 'serve':
+        serve(args)
+    elif inner:
         trusted_install()
         run_session(args)
     else:

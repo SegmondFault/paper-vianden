@@ -2,7 +2,8 @@
 
 ## Synthetic activity layer
 
-`python3 -m unittest discover -s tests -v` passes 24 tests, including clock
+`python3 -m unittest discover -s tests -v` passes 31 tests, including portal UID/role binding, command argument isolation,
+scoped SSH configuration updates, read-only observation, and clock
 sharing/bounds, independent seeded variants, smooth office modulation, jittered
 slot bounds/ordering, cadence recovery from observed-style timestamps, accelerated
 completion without duplicate events, dependency blocking, a failed chunk
@@ -19,6 +20,8 @@ rehearsal using prepared images, with no builds or pulls:
 - All 32 DNS chunks originated from the file host's actual container IP.
 - Real gateway/file-host password authentication appeared in target SSH logs.
 - The synthetic SQL query appeared in MariaDB's general log.
+- White read the completed objective through read-only mounts, as UID 65534,
+  without access to an administrator SSH key or Docker socket.
 - The actual blue workstation had no story source, objective journal or private
   instructor volume mounted. It received mixed raw office/transfer DNS evidence
   without phase, marker or scheduled-offset fields.

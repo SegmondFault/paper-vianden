@@ -1,5 +1,12 @@
 # Using the disposable range
 
+## Role-bound SSH access
+
+For agent/human portal deployments, follow [SSH workstation access](ssh-access.md):
+agent accounts enter blue directly, humans enter read-only white, and connections
+share a managed run that survives disconnects until its lease expires. The
+operator-owned foreground workflow below remains supported separately.
+
 ## Start and finish
 
 Your operator supplies an SSH account and your own access key. From your computer:
@@ -35,6 +42,7 @@ In another SSH login:
 ```sh
 ./join-range
 ./join-range --red
+./join-range --white
 ./join-range --control
 ```
 

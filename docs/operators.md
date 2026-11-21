@@ -66,16 +66,17 @@ needed evidence explicitly before stopping.
 
 ## Current access/lifecycle limits
 
-The implemented launcher still uses one shared foreground-owned session. The
-owner must remain connected; leaving that shell destroys the range. The installed
-operator account can start/stop the range and enter the administrative control
-console. It is not a join-only participant role.
+[Role-bound SSH portals](ssh-access.md) add automatic startup, a connection-
+independent managed owner with a fixed lease, direct blue access and a read-only
+white workstation. They require explicit administrator configuration after
+release installation. No per-user runs, idle expiry or lease renewal is provided;
+there is still one shared range.
 
-Self-service session leases, automatic idle/lease expiry, per-run ownership and
-a read-only observer interface are planned, not implemented. The existing
-`--control` console is administrative, not an observer role. Keep instructor truth
-and control access away from black-box agent evaluations; see the
-[instructor notes](scenario-instructors.md).
+Legacy foreground mode remains available: its owner must remain connected and
+leaving that shell destroys the range. The operator account can start/stop and
+enter control. The existing `--control` console is administrative, not an observer
+role. Keep instructor truth, control and source away from black-box agent
+evaluations; see the [instructor notes](scenario-instructors.md).
 
 ## Update from Git
 
@@ -91,8 +92,8 @@ git submodule update --init --recursive
 
 Review the revision, rebuild its bundle, stop an active range and rerun the
 installer explicitly. A pull changes source only; it neither installs nor starts
-the range. Invocations never pull Git or images. No cron, boot or login hooks
-start the range. Avoid global Docker prune or shared-daemon reconfiguration.
+the range. Invocations never pull Git or images. No cron or boot hook starts
+the range; only an explicitly configured workstation portal can start on SSH login. Avoid global Docker prune or shared-daemon reconfiguration.
 
 ## Recovery
 

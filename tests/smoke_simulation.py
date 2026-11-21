@@ -14,7 +14,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVICES = ('web-01', 'app-01', 'vpn-gw-01', 'file-01', 'db-01', 'ldap',
-            'mail', 'mail-sink', 'ftp', 'scenario-sink', 'activity', 'scenario-runner', 'defender')
+            'mail', 'mail-sink', 'ftp', 'scenario-sink', 'activity', 'scenario-runner', 'defender', 'white')
 
 
 def main():
@@ -119,6 +119,15 @@ def main():
             observed = list(map(json.loads, filter(str.strip, raw.splitlines())))
             assert any(event['query'].endswith('.office.range.test') for event in observed)
             assert all(not {'activity', 'phase', 'scheduled_seconds', 'marker'} & event.keys() for event in observed)
+            run('exec', '-T', 'white', 'python3', '/usr/local/bin/observe', '--check')
+            observed_status = json.loads(run('exec', '-T', 'white', 'python3',
+                '/usr/local/bin/observe', 'status', capture=True).stdout)
+            assert observed_status['story']['objective'] == 'complete'
+            inside('white', "import os; from pathlib import Path; "
+                "assert os.geteuid() == 65534; "
+                "assert not Path('/var/run/docker.sock').exists(); "
+                "assert not os.access('/root/.ssh/id_ed25519', os.R_OK); "
+                "assert os.statvfs('/var/log/range-instructor').f_flag & os.ST_RDONLY")
             for service in ('vpn-gw-01', 'file-01'):
                 auth = inside(service, "from pathlib import Path; print(Path('/var/log/auth.log').read_text())")
                 assert 'Accepted password for devuser' in auth, service
@@ -130,7 +139,7 @@ def main():
                 'rosetta_failures': emulation_failures,
                 'story_events': state['events_processed'], 'dns_chunks_from_file_host': len(dns),
                 'objective': state['objective'], 'seed': state['seed'],
-                'blue_answer_key_absent': True, 'mixed_raw_dns_log': True,
+                'blue_answer_key_absent': True, 'mixed_raw_dns_log': True, 'white_read_only': True,
                 'sql_query_logged': True, 'ssh_auth_logged': True}))
         except BaseException as error:
             if isinstance(error, subprocess.CalledProcessError):

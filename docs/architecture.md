@@ -13,6 +13,14 @@ SSH operator (no Docker group; fixed sudo commands)
             internal: database, directory, file and other services
 ```
 
+An optional root-configured SSH portal maps authenticated Unix UID/account pairs
+to blue or white, never a client-selected role. A custom forced login shell
+prevents host-shell startup files and sends commands as one argument into the
+selected workstation. On first login it starts a bounded-lifetime owner service,
+which holds a private PTY independently of SSH connections. White mounts journals
+read-only, has no Docker socket/admin key, and joins management only. See
+[SSH access](ssh-access.md) for configuration and current single-run limits.
+
 Host Docker is separate and never restarted or reconfigured. The dedicated
 daemon has no bridge, firewall management, forwarding or masquerading. Its only
 container has network=none. Inner bridges and rules belong to that container's
@@ -26,7 +34,9 @@ image checksums, creates a sparse 32 GiB ext4 disk, launches private helpers,
 loads the offline network and checks actual protocols before opening a shell.
 Joining only connects to an existing session.
 
-Owner exit, startup errors and terminal signals invoke cleanup. systemd owns
+Legacy foreground-owner exit, startup errors and terminal signals invoke cleanup.
+For managed portals, only owner service stop/lease expiry ends the run, not
+participant or observer disconnect. The session service binds to the owner unit. systemd owns
 the entire helper/container cgroup and kills descendants when the unit ends.
 Where available it also binds the unit to the caller's login scope. Mounts are
 private. The backing file is unlinked immediately after mounting so a forced

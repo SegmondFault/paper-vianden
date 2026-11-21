@@ -1,10 +1,11 @@
 #!/bin/sh
 # Joining never starts a session; the owner keeps its lifecycle.
 set -eu
-if [ "$#" -gt 1 ]; then echo 'Usage: join-range [--red|--control]' >&2; exit 2; fi
+if [ "$#" -gt 1 ]; then echo 'Usage: join-range [--red|--white|--control]' >&2; exit 2; fi
 case "${1-}" in
   "") exec sudo /usr/local/bin/paper-vianden join ;;
   --red) exec sudo /usr/local/bin/paper-vianden join --role red ;;
+  --white) exec sudo /usr/local/bin/paper-vianden join --role white ;;
   --control) exec sudo /usr/local/bin/paper-vianden join --role control ;;
-  *) echo 'Usage: join-range [--red|--control]' >&2; exit 2 ;;
+  *) echo 'Usage: join-range [--red|--white|--control]' >&2; exit 2 ;;
 esac

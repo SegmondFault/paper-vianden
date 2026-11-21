@@ -70,7 +70,7 @@ def main():
         run('useradd', '--no-create-home', '--user-group', '--shell', '/usr/sbin/nologin', 'sysbox')
     release = prefix/('release-'+manifest['files']['source.tar.gz'][:12])
     if not release.exists():
-        release.mkdir(mode=0o755)
+        release.mkdir(mode=0o700)
         with tarfile.open(bundle/'source.tar.gz') as archive:
             for member in archive.getmembers():
                 path = Path(member.name)
@@ -93,12 +93,15 @@ def main():
             (runtime/'fusermount3').chmod(0o755)
             shutil.copyfile(Path(temp)/'usr/share/doc/fuse3/copyright', runtime/'FUSE_COPYRIGHT')
         (release/'pv.py').chmod(0o755)
+        (release/'runtime/white.py').chmod(0o755)
     # Archives preserve the builder's numeric UID when extracted by root.
     # Never carry that identity into a privileged deployed release.
     for base, dirs, files in os.walk(release):
         os.chown(base, 0, 0)
         for name in files:
             os.chown(Path(base)/name, 0, 0)
+    # Workstation portals must not expose host-side storyline source.
+    release.chmod(0o700)
     library = store/'library'; library.mkdir(mode=0o755, exist_ok=True)
     for name in ['envelope.tar.gz', 'targets.tar.gz', 'manifest.json']:
         shutil.copyfile(bundle/name, library/name)
@@ -127,8 +130,8 @@ def main():
         finally:
             pending_script.unlink(missing_ok=True)
     rule = args.account+' ALL=(root) NOPASSWD: '+', '.join('/usr/local/bin/paper-vianden '+command for command in
-               ['run', 'run --role red', 'run --check', 'run --clock-speed *', 'join', 'join --role red',
-                'join --role control', 'stop', 'status'])+'\n'
+               ['run', 'run --role red', 'run --role white', 'run --check', 'run --clock-speed *', 'join', 'join --role red',
+                'join --role white', 'join --role control', 'stop', 'status'])+'\n'
     with tempfile.NamedTemporaryFile(mode='w', prefix='paper-sudo-', delete=False) as temp:
         temp.write(rule); candidate = Path(temp.name)
     try:

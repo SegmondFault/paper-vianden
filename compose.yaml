@@ -54,6 +54,33 @@ services:
       - activity-journal:/var/log/simulated-users:ro
       - dns-evidence:/var/log/dns:ro
 
+  white:
+    <<: *lab
+    image: paper-vianden/toolbox:local
+    hostname: white
+    user: "65534:65534"
+    entrypoint: [/bin/bash, -c, "exec sleep infinity"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment: {HOME: /tmp}
+    mem_limit: 96m
+    memswap_limit: 96m
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=8m,mode=1777
+    volumes:
+      - ../runtime/white.py:/usr/local/bin/observe:ro
+      - activity-journal:/var/log/simulated-users:ro
+      - story-journal:/var/log/range-instructor:ro
+      - dns-evidence:/var/log/dns:ro
+    # No target networks, administrator keys or Docker socket.
+    networks: [management]
+    healthcheck:
+      test: [CMD, python3, /usr/local/bin/observe, --check]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+
   activity:
     <<: *lab
     image: paper-vianden/toolbox:local
