@@ -1,7 +1,6 @@
 # Validation record
 
-The source-only prototype originates from a locally evaluated adaptation of
-VulnCastle. That evaluation used Docker Desktop's Linux ARM64 engine. All nine
+The local prototype was evaluated using Docker Desktop's Linux ARM64 engine. All nine
 containers became healthy; management SSH and portal/SMB/SQL/webmail/API/admin/
 Redis checks passed. Reset removed writable-layer and database-volume markers
 and restored the seed data. Unrelated local containers remained unchanged.
@@ -15,8 +14,8 @@ host/engine overhead and are not measured attack-load usage.
 ## Documentation walkthrough — 21 November 2026
 
 The ten project Markdown documents were reviewed against the launcher and service
-source. Relative documentation links, all twelve pinned course links, CLI help
-options and the source manifest/submodule revision were checked.
+source. Relative links, CLI help options and the source manifest/submodule revision
+were checked.
 
 A clean checkout of revision 2841225a68b9512efd6bbb9aa38d785e216cf4a2 was then
 tested using a separate local Docker project on Linux ARM64. The walkthrough
@@ -37,7 +36,5 @@ The review added a complete quickstart, service/credential reference, browser
 instructions, lifecycle details, troubleshooting and explicit source-update
 commands. It also corrected two stale upstream credential fixtures.
 
-The VPS has only a source checkout tracking Git; no range was started there for
-this review. Server AMD64, Sysbox lifecycle and combined learn-to-hack
-functionality have not yet been validated. Runtime evidence, keys and server
-inventories remain outside Git.
+AMD64, Sysbox lifecycle and the expanded service set have not yet been validated.
+Runtime evidence, keys and deployment inventories remain outside Git.

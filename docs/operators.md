@@ -2,9 +2,8 @@
 
 ## Deployment status
 
-The server currently has a source checkout only. Sysbox and the range have not
-been installed or started by this project. A successful Git clone is not a
-runtime deployment. The prototype is not a shared-server installer.
+A source checkout is not a runtime deployment. The prototype is not a
+shared-server installer; the disposable Sysbox runtime is still being built.
 
 No global Docker restart, default-runtime change, daemon address-pool change, or
 host-wide prune is part of the accepted deployment. The Sysbox package's standard
@@ -61,7 +60,7 @@ then switch the deployed release. Record the deployed commit. An ordinary range
 invocation must not git pull, switch releases or update images automatically.
 No cron job, boot hook or login hook should start the range.
 
-The submodule command obtains the course revision recorded by Paper Vianden;
+The submodule command obtains dependency revisions recorded by Paper Vianden;
 do not add --remote for an ordinary checkout/update. Changing its recorded pin
 is a reviewed source change, not a session-start operation.
 

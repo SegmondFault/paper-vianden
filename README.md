@@ -8,12 +8,11 @@ describes the service network. Existing lab software supplies the targets.
 
 ## Current status
 
-This first revision contains the locally tested VulnCastle-based prototype,
-project documentation, and a pinned copy of Michael Borck's learn-to-hack labs.
-The prototype starts, provides management access, collects basic logs and resets.
+The local prototype starts a segmented Linux service network, provides
+management access, collects basic logs and restores seeded state.
 It has seven targets and nine containers in total.
 
-The Sysbox envelope, combined learn-to-hack service configuration and automatic
+The Sysbox envelope, expanded service configuration and automatic
 session destruction are **not implemented yet**. The prototype is not the final
 server deployment. Creating this repository does not start or install a range.
 
@@ -74,6 +73,6 @@ Our original code and documentation use the [MIT licence](LICENSE). Third-party
 components retain their own licences. See [third-party notices](THIRD_PARTY_NOTICES.md)
 and [source revisions](sources.json).
 
-The range builds on [VulnCastle](https://github.com/0x6d61/vulncastle) and
-[Ethical Hacking Docker Labs](https://github.com/michael-borck/ethical-hacking-docker-labs).
-The course source is a Git submodule; clone with --recurse-submodules.
+Required upstream copyright, licensing and source-revision information is
+recorded in the notices and manifest linked above. Clone with --recurse-submodules
+to obtain pinned dependencies.

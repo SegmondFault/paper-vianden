@@ -15,8 +15,8 @@ python3 tools/check_public_tree.py --history
 The hooks reject private document/data paths, classified labels and common
 credential formats. They inspect Git objects, so force-adding an ignored document
 does not bypass the check. Review provenance as well: generic automated checks
-cannot recognize confidential prose without identifying labels. Do not copy
-source exercise documents, meeting notes or server records into public guides.
+cannot recognize confidential prose without identifying labels. Public text
+describes product capabilities, configuration and operation only.
 
 For the current prototype, these checks do not start a range:
 
@@ -29,7 +29,7 @@ git diff --check
 ```
 
 Use the [user guide](docs/users.md) for runtime validation on a dedicated lab
-engine, including explicit shutdown. Preserve the course source as a pinned
+engine, including explicit shutdown. Preserve dependency source as a pinned
 submodule; document changes to sources.json when its revision changes.
 
 Do not commit keys, credentials, runtime records, server inventories or restricted

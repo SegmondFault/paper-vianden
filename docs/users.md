@@ -197,5 +197,5 @@ The --minimal option is for a four-target troubleshooting set. To switch an
 already-running instance between sets, use reset with the intended option; up
 does not remove services left from a previously larger set.
 
-Source course guides under upstream/ are reference material pending integration.
-Do not run their launchers directly on the shared VPS as if they used our envelope.
+Use the supported launcher commands above. Other retained launchers are upstream
+reference code and do not create the planned outer sandbox.

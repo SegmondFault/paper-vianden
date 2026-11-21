@@ -1,59 +1,36 @@
-# Service coverage
+# Service capabilities
 
-This matrix distinguishes the tested prototype from available upstream material.
-Upstream availability does not imply that a service is integrated or tested here.
-For current endpoints and synthetic credentials, see the [user guide](users.md#find-the-services).
+The current local prototype provides the following capabilities. The additional
+services are being integrated into the disposable sandbox; availability of a
+source component is not a claim of validated runtime support.
 
-| Capability | Current prototype | Learn-to-hack source / planned work |
+| Capability | Current local prototype | Additional implementation |
 | --- | --- | --- |
-| Segmented network and SSH pivot | DMZ/internal segments; dual-homed SSH gateway | Week 9 pivot topology; separate participant entry pending |
-| Linux SSH targets | Weak lab accounts and management keys | Weeks 4, 6, 8 and 9 |
-| HTTP/PHP portal | Nginx/PHP, uploads and other intentional weaknesses | Weeks 4 and 8 web targets |
-| SQL database | MariaDB and synthetic records | Weeks 4, 5, 7 and 9 MySQL exercises |
-| SMB | Samba guest/authenticated shares | Week 5 enumeration |
-| API/admin/Redis | Present | Additional VulnCastle targets |
-| Directory services | Absent | Week 5 OpenLDAP and phpLDAPadmin |
-| SNMP | Absent | Week 5 simulator |
-| FTP | Absent | Week 8 service |
-| Actual mail protocols | Absent; webmail is an HTTP mock | Week 8 SMTP and Dovecot; Week 12 MailHog |
-| DVWA and Juice Shop | Absent | Week 7 vulnerable applications |
-| Packet analysis | tcpdump on individual nodes; no central sensor | Weeks 1/3/7 Wireshark and sample captures |
-| Password exercises | Weak accounts only | Week 6 tools, hashes and wordlists |
-| Exploit development | Absent | Week 10 32-bit x86 C target and debugger tools |
-| Badge-reader simulation | Absent | Week 11 Python simulation |
-| Phishing simulation | Absent | Week 12 GoPhish with internal MailHog delivery |
-| Ethics, scope and reporting | No runtime required | Course documentation |
+| Network segmentation | DMZ and internal segments | Disposable outer boundary |
+| SSH and pivoting | Weak Linux accounts, management keys, dual-homed gateway | Separate participant console |
+| HTTP/PHP portal | Upload, file-read and command-execution weaknesses | Additional web targets |
+| SQL | MariaDB with synthetic records | Separate vulnerable-web application database |
+| SMB | Guest and authenticated Samba shares | Existing protocol retained |
+| API/admin/Redis | Present | Existing targets retained |
+| Directory services | Not present | OpenLDAP and administration UI |
+| SNMP | Not present | Simulated router endpoint |
+| FTP | Not present | Anonymous file service |
+| Mail protocols | HTTP mailbox mock only | SMTP capture, IMAP and POP3 |
+| Vulnerable web applications | Simple portal and API | DVWA and Juice Shop |
+| Packet analysis | tcpdump on individual nodes | Headless packet-analysis tools |
+| Password analysis | Weak accounts only | Hash and credential-testing tools |
+| Binary analysis | Not present | 32-bit teaching server and debugger tools |
+| Physical-access simulation | Not present | Badge-reader HTTP simulator |
+| Mail-based simulation | Not present | Internal campaign tooling and captured delivery |
 
-The linked directory exercise uses OpenLDAP, not a Windows Active Directory
-domain controller. Actual AD is a separate capability and is not currently
-included. Wi-Fi radios, mobile hardware and industrial process models are also
-outside the current implementation.
+OpenLDAP is not a Windows Active Directory domain controller. Actual AD, radio
+hardware, mobile devices and industrial process models are outside this version.
 
-The existing applications are independent training fixtures, not a connected
-business system: the API uses in-memory records, the admin login uses its own
-SQLite database, and the PHP portal does not use the MariaDB customer database.
-Service availability is useful for protocol and administration experiments, but
-does not establish a realistic end-to-end business workflow or traffic baseline.
+The existing applications are independent training fixtures. The API uses
+in-memory records; the admin login uses SQLite; the PHP portal does not use the
+MariaDB customer database. This is a service network, not a complete connected
+business application or a normal-traffic generator.
 
-Week 10's upstream privileged host-ASLR changes must not be copied unchanged
-onto a shared host. Architecture requirements and per-session containment need
-validation before that module is supported. All modules must follow the common
-on-demand lifecycle and leave unrelated host workloads unchanged.
-
-## Read the source exercises
-
-These links open the pinned upstream revision. The guides describe their own
-standalone labs; their launchers do not yet use Paper Vianden's planned envelope.
-
-- [Week 1: setup and packet tools](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week1)
-- [Week 2: ethics](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week2)
-- [Week 3: traffic analysis](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week3)
-- [Week 4: scanning/reporting](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week4)
-- [Week 5: LDAP, SMB, SQL and SNMP](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week5)
-- [Week 6: password exercises](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week6)
-- [Week 7: web applications](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week7)
-- [Week 8: privilege escalation and services](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week8)
-- [Week 9: pivoting](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week9)
-- [Week 10: exploit development](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week10)
-- [Week 11: badge-reader simulation](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week11)
-- [Week 12: phishing/mail simulation](https://github.com/michael-borck/ethical-hacking-docker-labs/tree/60d981e509ea186be0c31d1ea1cbb536fa6f387e/labs/week12)
+For current endpoints and synthetic credentials, see the
+[user guide](users.md#find-the-services). Runtime support is recorded separately
+in the [validation record](validation.md).
