@@ -1,0 +1,11 @@
+.git
+**/.git
+local
+artifacts
+**/state
+**/runs
+**/__pycache__
+**/*.pyc
+.env
+.env.*
+.DS_Store

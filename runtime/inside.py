@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Start the prepared, network-disconnected inner range. No downloads/builds."""
+import json
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+ROOT = Path('/opt/paper-vianden')
+COMPOSE = ['docker', 'compose', '-p', 'paper-vianden', '--profile', 'extended',
+           '-f', str(ROOT/'prototype/docker-compose.yml'), '-f', str(ROOT/'compose.yaml')]
+
+
+def run(args, **kw):
+    return subprocess.run(args, cwd=ROOT, check=True, **kw)
+
+
+def main():
+    daemon = subprocess.Popen(['dockerd', '--host=unix:///var/run/docker.sock',
+                               '--storage-driver=overlay2'], stdout=open('/tmp/dockerd.log', 'w'),
+                              stderr=subprocess.STDOUT)
+    try:
+        for _ in range(120):
+            if daemon.poll() is not None:
+                raise RuntimeError(Path('/tmp/dockerd.log').read_text()[-5000:])
+            if subprocess.run(['docker', 'info'], stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode == 0:
+                break
+            time.sleep(.5)
+        else:
+            raise RuntimeError('Inner Docker did not become ready')
+        run(['docker', 'load', '-i', '/library/targets.tar.gz'], stdout=subprocess.DEVNULL)
+        run(['python3', str(ROOT/'prototype/range'), 'init'])
+        run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--wait', '--wait-timeout', '180'])
+        run(COMPOSE+['exec', '-T', 'defender', 'python3',
+                     '/opt/paper-vianden/runtime/initialise.py'])
+        run(COMPOSE+['exec', '-T', 'defender', 'python3',
+                     '/opt/paper-vianden/runtime/check.py'])
+        Path('/tmp/paper-vianden-ready').write_text('ready\n')
+        print(json.dumps({'event': 'ready', 'services': 22}), flush=True)
+        while daemon.poll() is None:
+            time.sleep(1)
+        raise RuntimeError('Inner Docker stopped unexpectedly')
+    finally:
+        if daemon.poll() is None:
+            daemon.terminate()
+            try:
+                daemon.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                daemon.kill()
+                daemon.wait()
+
+
+if __name__ == '__main__':
+    main()

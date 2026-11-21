@@ -1,0 +1,10 @@
+#!/bin/sh
+# Generic account entry point. No host names, credentials or automatic startup.
+set -eu
+if [ "$#" -gt 1 ]; then echo 'Usage: start-range [--red|--check]' >&2; exit 2; fi
+case "${1-}" in
+  "") exec sudo /usr/local/bin/paper-vianden run ;;
+  --red) exec sudo /usr/local/bin/paper-vianden run --role red ;;
+  --check) exec sudo /usr/local/bin/paper-vianden run --check ;;
+  *) echo 'Usage: start-range [--red|--check]' >&2; exit 2 ;;
+esac

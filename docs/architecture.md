@@ -1,43 +1,51 @@
 # Architecture
 
-This document describes the target design, not a deployed implementation.
-It is one disposable Sysbox system container containing its own
-Docker daemon and the complete training network. The outer sandbox is the unit
-of lifecycle and aggregate resource control. Docker Compose defines services and
-segments inside it. A small Python controller owns session creation and cleanup.
-
 ```text
-Server
-  administrator-owned launcher and image library
-    disposable Sysbox envelope
-      private Docker daemon
-        management / participant access
-        DMZ services
-        internal services
-        selected course targets
+SSH operator (no Docker group; fixed sudo commands)
+  Python launcher
+    transient systemd service — explicit invocation only
+      private mount namespace + bounded disposable filesystem
+      dedicated Docker daemon + private Sysbox helpers
+        Sysbox envelope — no external network, 4 CPUs, 6 GiB RAM
+          inner Docker daemon + offline images
+            management: blue workstation
+            DMZ: participant workstation + exposed fixtures
+            internal: database, directory, file and other services
 ```
 
-Session creation is explicit. The controller provides access after services are
-ready and removes session resources after normal exit or cancellation. Host
-shutdown, power loss and forced termination need a tested recovery policy;
-cleanup must not be promised solely on the basis of a Python finally block.
+Host Docker is separate and never restarted or reconfigured. The dedicated
+daemon has no bridge, firewall management, forwarding or masquerading. Its only
+container has network=none. Inner bridges and rules belong to that container's
+network namespace. No target port is published on the host. The only host bind
+in the envelope is the read-only target image archive.
 
-No host Docker socket enters the sandbox. The runtime image library may remain
-cached, but mutable target state and temporary credentials belong to the session.
-Evidence retained after teardown must be an explicit export, with a documented
-storage budget.
+## Lifecycle
 
-The current prototype under prototype/ implements the inner Linux service
-network only. It does not implement the outer envelope or one-shot lifecycle.
-Its existing down/reset commands save local records automatically; the final
-session's explicit evidence-export policy has not yet been implemented.
+The owner takes a singleton lock and starts a transient service. It verifies
+image checksums, creates a sparse 32 GiB ext4 disk, launches private helpers,
+loads the offline network and checks actual protocols before opening a shell.
+Joining only connects to an existing session.
 
-## Design constraints
+Owner exit, startup errors and terminal signals invoke cleanup. systemd owns
+the entire helper/container cgroup and kills descendants when the unit ends.
+Where available it also binds the unit to the caller's login scope. Mounts are
+private. The backing file is unlinked immediately after mounting so a forced
+exit cannot leave a named session disk. Explicit stop targets this unit only.
+Power-loss recovery requires a separate reboot test; no reboot is performed.
 
-- Reuse service images, course fixtures and standard runtime behaviour.
-- Keep custom code to lifecycle, access and evidence glue.
-- Start only on invocation; no automatic boot/login/scheduled startup.
-- Restore seed state for a fresh session.
-- Preserve unrelated server services, networking and data.
-- Pin upstream revisions and deployment commits.
-- Keep real credentials and restricted exercise documents outside Git.
+## Boundaries
+
+The whole service has caps of 4 CPUs, 7 GiB RAM, zero swap and 4,096 tasks.
+The outer container has 6 GiB RAM and 2,048 tasks. Per-service caps and rotated
+logs add limits inside it. The filesystem bounds all mutable image, volume,
+upload and database growth together; sparse allocation grows with actual writes.
+The prepared library remains cached outside the disposable filesystem.
+
+Release source, binaries and library are root-owned. The user-writable Git
+checkout and account scripts are not privileged executable inputs. Updates
+require explicit administrator installation.
+
+Sysbox shares the host kernel; it is not a hardware VM. Role consoles are
+administrative within the lab and do not provide separate tenant isolation.
+There is no model runtime, scoring service, traffic generator or automatic
+evidence retention.

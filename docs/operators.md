@@ -1,79 +1,90 @@
 # Operator guide
 
-## Deployment status
+## Prepare a release
 
-A source checkout is not a runtime deployment. The prototype is not a
-shared-server installer; the disposable Sysbox runtime is still being built.
-
-No global Docker restart, default-runtime change, daemon address-pool change, or
-host-wide prune is part of the accepted deployment. The Sysbox package's standard
-installer may change Docker configuration and restart it; its exact package
-scripts and dependencies must be reviewed before use on the shared server.
-
-## Proposed installation
-
-1. Review the exact Sysbox package, dependencies and integration procedure.
-2. Establish a no-disruption installation path. If this requires restarting or
-   changing unrelated workloads, stop and resolve the deployment design.
-3. Build the envelope and target image library for the server architecture.
-4. Install an administrator-owned release and a narrow operator interface.
-5. Validate creation, access, interruption cleanup, reset and resource boundaries.
-
-The operator should not need Docker-group membership or unrestricted sudo. A
-privileged launcher must run only administrator-owned code/configuration; do not
-execute it as root from an operator-writable checkout.
-
-## Git deployment
-
-The public source repository is [SegmondFault/paper-vianden](https://github.com/SegmondFault/paper-vianden).
-Clone as an ordinary user; this starts no services:
+Use a development Docker engine supporting Linux amd64, Git, Python 3.9+ and
+modern Compose with `!reset` overlays. Build away from the shared server:
 
 ```sh
 git clone --recurse-submodules https://github.com/SegmondFault/paper-vianden.git
 cd paper-vianden
-git status --short
-git log -1 --oneline
-git submodule status
+python3 tools/check_public_tree.py --history
+python3 tools/build_bundle.py --context default
 ```
 
-The main branch tracks origin/main. An existing checkout can fetch and update
-explicitly, provided its working tree is clean:
+This builds shared layers and service images, exports compressed images and
+packages tracked public source. The pinned Sysbox package is SHA-256 verified.
+The ignored artifacts/ directory contains the bundle and checksum manifest.
+Keep the upstream dependency clean at its recorded revision. `--skip-build`
+reuses target images; the envelope is still rebuilt.
+
+## Install explicitly
+
+The initial target is Debian 12 Linux amd64 with cgroup v2, user namespaces,
+FUSE and an existing compatible Docker engine. Allow 34 GiB free disk for the
+bounded session filesystem, separately from the prepared image library.
+The installer does not install or upgrade the host Docker engine.
+
+Transfer the bundle, tools/install.py and the operator's **public** Ed25519 key
+using existing administrator access. Keep the private key on the operator's
+computer. On the server:
 
 ```sh
+sudo python3 tools/install.py --bundle /path/to/bundle --public-key /path/to/operator.pub --account range-user
+```
+
+The installer verifies hashes, creates a restricted account and Sysbox subordinate
+ID account, extracts only runtime binaries and a licence notice from the package,
+and installs a root-owned release. It does not run package maintainer scripts,
+apt, sysctl, Docker restarts or boot-time enabling.
+
+| Path | Purpose |
+| --- | --- |
+| /opt/paper-vianden/release-* | Root-owned source and runtime binaries |
+| /opt/paper-vianden/current | Selected release |
+| /var/lib/paper-vianden/library | Prepared images and manifest |
+| /usr/local/bin/paper-vianden | Fixed privileged launcher |
+| /etc/sudoers.d/paper-vianden | Exact permitted commands |
+| /run/paper-vianden | Ephemeral session control state |
+| Operator home | start-range, join-range, stop-range, range-status |
+
+No Docker-group membership, password or general sudo is granted. Existing
+unmanaged accounts are refused. Never run privileged code from a user-writable
+checkout.
+
+## Validate
+
+Record the original service state and Docker PID/start time. In the new account
+run `./range-status`, then `./start-range --check`. All protocols must pass,
+cleanup must complete and status must return `Stopped`. Confirm that original
+Docker and unrelated workloads kept their PID/start/restart state. Test shell
+exit, explicit stop and fresh fixture restoration before shared use.
+
+Only one session is allowed. Joining cannot start it. The control console
+manages inner containers without exposing the host socket. Users must export
+needed evidence explicitly before stopping.
+
+## Update from Git
+
+Keep the ordinary checkout tracking origin/main separate from the root release:
+
+```sh
+git status --short
 git fetch origin
 git log --oneline HEAD..origin/main
 git pull --ff-only
 git submodule update --init --recursive
 ```
 
-These commands update source only; they do not install a runtime or start targets.
-If there are local changes or divergent commits, stop and review them rather than
-resetting or overwriting the checkout.
+Review the revision, rebuild its bundle, stop an active range and rerun the
+installer explicitly. A pull changes source only; it neither installs nor starts
+the range. Invocations never pull Git or images. No cron, boot or login hooks
+start the range. Avoid global Docker prune or shared-daemon reconfiguration.
 
-Keep server checkout and administrator-owned deployed release separate. The
-public repository requires no GitHub credential to clone. Where authenticated
-access is used, scope a deploy key to read-only repository access; private key
-material stays on the server and outside the repository.
+## Recovery
 
-An update is explicit: fetch, review a selected tag/commit, stage it, validate it,
-then switch the deployed release. Record the deployed commit. An ordinary range
-invocation must not git pull, switch releases or update images automatically.
-No cron job, boot hook or login hook should start the range.
-
-The submodule command obtains dependency revisions recorded by Paper Vianden;
-do not add --remote for an ordinary checkout/update. Changing its recorded pin
-is a reviewed source change, not a session-start operation.
-
-## Resources and host protection
-
-Give the outer sandbox an aggregate CPU/RAM/PID budget and verified bounded
-session storage. Docker log rotation alone does not cap database, upload or image
-growth. Plan image storage separately from disposable session data.
-
-The envelope must not mount the host Docker socket, use host network/PID
-namespaces, or expose unrelated host directories. Restrict its host-facing
-network and verify host-service reachability rather than assuming that container
-networks provide a complete host boundary.
-
-Sysbox shares the host kernel. It is not a hardware-virtualized boundary. The
-installation and network policy must reflect the workloads permitted in the lab.
+`sudo systemctl stop paper-vianden-session.service` targets the range only.
+Failed startup prints diagnostic helper log tails before deleting its disk.
+Investigate any cleanup failure before another start. Never stop host Docker
+to recover this range. Startup refuses if another Sysbox instance is already
+running. No shared-host reboot is part of installation or validation.

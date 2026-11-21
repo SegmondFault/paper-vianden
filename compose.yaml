@@ -1,0 +1,179 @@
+# Overlay on prototype/docker-compose.yml. Paths resolve from prototype/.
+x-lab: &lab
+  init: true
+  restart: "no"
+  cpus: 0.25
+  mem_limit: 128m
+  memswap_limit: 128m
+  pids_limit: 128
+  dns: [127.0.0.1]
+  logging:
+    driver: json-file
+    options: {max-size: 5m, max-file: "2"}
+
+services:
+  web-01:
+    image: paper-vianden/web-01:local
+  vpn-gw-01:
+    image: paper-vianden/vpn-gw-01:local
+  db-01:
+    image: paper-vianden/db-01:local
+    volumes:
+      - ../runtime/20-dvwa.sql:/docker-entrypoint-initdb.d/20-dvwa.sql:ro
+  file-01:
+    image: paper-vianden/file-01:local
+  mail-01:
+    image: paper-vianden/mail-01:local
+  app-01:
+    image: paper-vianden/app-01:local
+  admin-01:
+    image: paper-vianden/admin-01:local
+  entry:
+    image: paper-vianden/entry:local
+    ports: !reset []
+  defender:
+    image: paper-vianden/toolbox:local
+    build: {context: .., dockerfile: Dockerfile.labs, target: toolbox}
+    mem_limit: 512m
+    memswap_limit: 512m
+    volumes:
+      - ../upstream/ethical-hacking-docker-labs:/course:ro
+      - ../runtime:/opt/paper-vianden/runtime:ro
+
+  red:
+    <<: *lab
+    image: paper-vianden/toolbox:local
+    mem_limit: 512m
+    memswap_limit: 512m
+    hostname: red
+    entrypoint: [/bin/bash, -c, "exec sleep infinity"]
+    volumes:
+      - ../upstream/ethical-hacking-docker-labs:/course:ro
+    networks: [dmz]
+
+  ldap:
+    <<: *lab
+    image: osixia/openldap:1.5.0
+    command: --copy-service
+    mem_limit: 256m
+    memswap_limit: 256m
+    environment:
+      LDAP_ORGANISATION: EnumCorp
+      LDAP_DOMAIN: enum.lab
+      LDAP_BASE_DN: dc=enum,dc=lab
+      LDAP_ADMIN_PASSWORD: admin
+      LDAP_TLS: "false"
+    volumes:
+      - ../upstream/ethical-hacking-docker-labs/labs/week5/ldap/seed.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-seed.ldif:ro
+      - ../runtime/ldap-anonymous.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/99-anonymous.ldif:ro
+    networks:
+      internal: {aliases: [ldap.internal]}
+
+  ldap-admin:
+    <<: *lab
+    image: osixia/phpldapadmin:0.9.0
+    pids_limit: 256
+    mem_limit: 256m
+    memswap_limit: 256m
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: ldap.internal
+      PHPLDAPADMIN_HTTPS: "false"
+    networks:
+      internal: {aliases: [ldap-admin.internal]}
+
+  snmp:
+    <<: *lab
+    image: tandrup/snmpsim:v0.4
+    mem_limit: 64m
+    memswap_limit: 64m
+    volumes:
+      - ../upstream/ethical-hacking-docker-labs/labs/week5/snmp:/usr/local/snmpsim/data:ro
+    networks:
+      internal: {aliases: [router.internal]}
+
+  ftp:
+    <<: *lab
+    image: paper-vianden/ftp:local
+    build: {context: .., dockerfile: Dockerfile.labs, target: ftp}
+    volumes:
+      - ./state/blue.pub:/run/blue-team.pub:ro
+    networks:
+      dmz: {aliases: [ftp.dmz]}
+
+  mail:
+    <<: *lab
+    image: paper-vianden/mail:local
+    build: {context: .., dockerfile: Dockerfile.labs, target: mail}
+    volumes:
+      - ./state/blue.pub:/run/blue-team.pub:ro
+    networks:
+      internal: {aliases: [mail.internal]}
+
+  mail-sink:
+    <<: *lab
+    image: mailhog/mailhog:v1.0.1
+    networks:
+      dmz: {aliases: [mail-sink.dmz]}
+
+  dvwa:
+    <<: *lab
+    image: ghcr.io/digininja/dvwa@sha256:c7e272f2b6b617bd4446ee5439f525f8ba562c46ac9b1787609b45b68591d0f8
+    mem_limit: 384m
+    memswap_limit: 384m
+    environment:
+      DB_SERVER: db-01.internal
+      DB_DATABASE: dvwa
+      DB_USER: dvwa
+      DB_PASSWORD: p@ssw0rd
+      DEFAULT_SECURITY_LEVEL: low
+    networks:
+      dmz: {aliases: [dvwa.dmz]}
+      internal: {}
+
+  juice-shop:
+    <<: *lab
+    image: bkimminich/juice-shop:v20.1.1
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 256
+    networks:
+      dmz: {aliases: [juice-shop.dmz]}
+
+  phishing:
+    <<: *lab
+    image: gophish/gophish:0.12.1
+    mem_limit: 256m
+    memswap_limit: 256m
+    environment:
+      ADMIN_LISTEN_URL: 0.0.0.0:3333
+      ADMIN_USE_TLS: "false"
+      PHISH_LISTEN_URL: 0.0.0.0:80
+    networks:
+      dmz: {aliases: [phishing.dmz]}
+
+  badge:
+    <<: *lab
+    image: paper-vianden/badge:local
+    build: {context: .., dockerfile: Dockerfile.labs, target: badge}
+    volumes:
+      - ./state/blue.pub:/run/blue-team.pub:ro
+    networks:
+      internal: {aliases: [badge.internal]}
+
+  bof:
+    <<: *lab
+    image: paper-vianden/bof:local
+    build: {context: .., dockerfile: Dockerfile.labs, target: bof}
+    cap_add: [SYS_PTRACE]
+    volumes:
+      - ./state/blue.pub:/run/blue-team.pub:ro
+    networks:
+      internal: {aliases: [bof.internal]}
+
+  silent:
+    <<: *lab
+    image: alpine:3.22
+    command: [sleep, infinity]
+    mem_limit: 32m
+    memswap_limit: 32m
+    networks: [dmz]

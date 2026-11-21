@@ -14,7 +14,7 @@
       "name": "Ethical Hacking Docker Labs",
       "url": "https://github.com/michael-borck/ethical-hacking-docker-labs",
       "revision": "60d981e509ea186be0c31d1ea1cbb536fa6f387e",
-      "usage": "Pinned source submodule; combined range integration pending",
+      "usage": "Pinned public source fixtures integrated by Dockerfile.labs and compose.yaml",
       "license": "MIT",
       "copyright": "Copyright (c) 2025 Michael Borck",
       "notice": "upstream/ethical-hacking-docker-labs/LICENSE"
@@ -24,7 +24,7 @@
       "url": "https://github.com/nestybox/sysbox",
       "version_reviewed": "0.7.1",
       "license": "Apache-2.0",
-      "usage": "Proposed outer runtime; not bundled or installed"
+      "usage": "Pinned runtime extracted into administrator-owned installations; package scripts are not run"
     }
   ]
 }

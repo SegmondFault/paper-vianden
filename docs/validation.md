@@ -36,5 +36,12 @@ The review added a complete quickstart, service/credential reference, browser
 instructions, lifecycle details, troubleshooting and explicit source-update
 commands. It also corrected two stale upstream credential fixtures.
 
-AMD64, Sysbox lifecycle and the expanded service set have not yet been validated.
+## Expanded runtime validation
+
+The combined AMD64 image library builds successfully. Resolved Compose has 22
+services and no published host ports. Directory seed enumeration, its UI, SNMP
+and the core protocol checks pass locally. FTP and mail encounter amd64
+emulation errors on an ARM64 development engine; native verification is pending.
+The new Sysbox lifecycle is awaiting native Linux validation.
+
 Runtime evidence, keys and deployment inventories remain outside Git.

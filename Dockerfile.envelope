@@ -1,0 +1,9 @@
+FROM docker:28-dind@sha256:9a06753d2401cd049b34cd27dbbc3e0db717d4c1db7bc7f2efad1c187e00bf5a
+RUN apk add --no-cache python3 bash openssh-client
+WORKDIR /opt/paper-vianden
+COPY prototype/ ./prototype/
+COPY upstream/ethical-hacking-docker-labs/ ./upstream/ethical-hacking-docker-labs/
+COPY compose.yaml ./compose.yaml
+COPY runtime/ ./runtime/
+ENV DOCKER_TLS_CERTDIR="" RANGE_PROJECT=paper-vianden
+ENTRYPOINT ["python3", "/opt/paper-vianden/runtime/inside.py"]

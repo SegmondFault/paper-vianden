@@ -1,0 +1,34 @@
+# Shared, deliberately weak Linux base built from prototype/Dockerfile.
+FROM paper-vianden/target-base:local AS ftp
+RUN apt-get update && apt-get install -y --no-install-recommends vsftpd \
+    && rm -rf /var/lib/apt/lists/* && mkdir -p /srv/ftp/pub /var/run/vsftpd/empty
+COPY upstream/ethical-hacking-docker-labs/labs/week8/ftp-data/ /srv/ftp/pub/
+COPY runtime/vsftpd.conf /etc/vsftpd.conf
+CMD ["bash", "-ec", "touch /var/log/vsftpd.log; tail -F /var/log/vsftpd.log >&2 & exec /usr/sbin/vsftpd /etc/vsftpd.conf"]
+
+FROM paper-vianden/target-base:local AS mail
+RUN apt-get update && apt-get install -y --no-install-recommends dovecot-imapd dovecot-pop3d \
+    && rm -rf /var/lib/apt/lists/*
+COPY runtime/dovecot.conf /etc/dovecot/local.conf
+RUN python3 -c "import pathlib,pwd,os; u=pwd.getpwnam('sysadmin'); h=pathlib.Path(u.pw_dir)/'Maildir'; [(h/x).mkdir(parents=True,exist_ok=True) for x in ['new','cur','tmp']]; (h/'new'/'welcome').write_text('From: helpdesk@range.test\nTo: sysadmin@range.test\nSubject: Welcome to Paper Vianden\n\nSynthetic training mailbox.\n'); [os.chown(p,u.pw_uid,u.pw_gid) for p in [h,*h.rglob('*')]]"
+CMD ["dovecot", "-F"]
+
+FROM paper-vianden/target-base:local AS badge
+COPY upstream/ethical-hacking-docker-labs/labs/week11/access-control/app.py /app/app.py
+COPY upstream/ethical-hacking-docker-labs/labs/week11/valid_badges.txt /app/valid_badges.txt
+CMD ["python3", "-u", "/app/app.py"]
+
+FROM paper-vianden/target-base:local AS bof
+RUN apt-get update && apt-get install -y --no-install-recommends gcc-multilib gdb \
+    && rm -rf /var/lib/apt/lists/*
+COPY upstream/ethical-hacking-docker-labs/labs/week10/vuln-server.c /opt/vuln-server.c
+RUN gcc -m32 -O0 -g -fno-stack-protector -z execstack -no-pie -o /opt/vuln /opt/vuln-server.c
+# ASLR stays enabled on the host. Non-PIE still permits the source's ret2win lab.
+CMD ["bash", "-c", "while true; do /opt/vuln; sleep 1; done"]
+
+FROM paper-vianden/workstation-base:local AS toolbox
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ldap-utils snmp nmap hydra john hashcat tshark sqlmap gdb gcc \
+    telnet openssl unzip wget python3-pip \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install --no-cache-dir pwntools==4.14.1

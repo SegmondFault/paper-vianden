@@ -1,78 +1,56 @@
 # Paper Vianden
 
-A disposable, on-demand cyber range for attack and defence.
+An on-demand, disposable network for attack and defence testing.
 
-Paper Vianden is being assembled as shared infrastructure for people to test
-their own tools and ideas. Python handles session lifecycle; Docker Compose YAML
-describes the service network. Existing lab software supplies the targets.
+One Sysbox system container runs 22 service and workstation containers across
+management, DMZ and internal networks. Python owns the lifecycle; Docker Compose
+describes services. There is no model runtime or agent code.
 
-## Current status
+## Use an installed range
 
-The local prototype starts a segmented Linux service network, provides
-management access, collects basic logs and restores seeded state.
-It has seven targets and nine containers in total.
+Log into the operator account, then run:
 
-The Sysbox envelope, expanded service configuration and automatic
-session destruction are **not implemented yet**. The prototype is not the final
-server deployment. Creating this repository does not start or install a range.
+```sh
+./range-status          # Does not start anything
+./start-range           # Fresh network, then a blue workstation shell
+```
 
-## Try the working prototype locally
+Exit that owner shell to destroy the session. In another login, use
+`./join-range --red` for a participant workstation or
+`./join-range --control` to administer lab containers. Joining never starts a
+range. `./stop-range` ends the session; `./start-range --check` starts, tests
+the protocols and destroys it.
 
-Use a dedicated local Linux Docker engine, Docker Desktop, or WSL2. Requirements
-are Python 3.9+, Git, OpenSSH tools and Docker Compose v2.20+.
+## Capabilities
+
+SSH, HTTP/PHP, SQL, SMB, Redis, LDAP, SNMP, FTP, captured SMTP, IMAP, POP3,
+vulnerable web applications, a badge-reader simulator, a 32-bit teaching server
+and packet/password/debugging tools. Fixtures and passwords are synthetic.
+See [services](docs/services.md) and the [user guide](docs/users.md).
+
+## Installation and boundaries
+
+An administrator prepares an offline library and installs a root-owned release
+with a restricted operator account. Nothing starts at boot, login or installation.
+Each invocation uses its own Docker daemon, socket and disposable filesystem;
+it does not reconfigure or restart the host Docker daemon. Targets have no
+host-published ports or external route.
+
+The outer container has a 4 CPU, 6 GiB RAM and 2,048-task cap; the whole session
+service has a 7 GiB ceiling. Mutable storage has a 32 GiB filesystem limit.
+Images remain cached separately. Sysbox shares the host kernel; it is not a VM.
+
+Read the [operator guide](docs/operators.md), [architecture](docs/architecture.md)
+and [validation record](docs/validation.md). Native Sysbox validation is in
+progress. A separately tested [local prototype](docs/prototype.md) remains
+available for development.
+
+## Licence
+
+Original code and documentation use [MIT](LICENSE). Dependencies retain their
+licences. Attribution and pins are in [notices](THIRD_PARTY_NOTICES.md) and
+[sources.json](sources.json). Clone with:
 
 ```sh
 git clone --recurse-submodules https://github.com/SegmondFault/paper-vianden.git
-cd paper-vianden/prototype
-./range init
-./range config
-./range build
-./range up --no-build
-./range check
-./range login
 ```
-
-config should report nine services. up waits for their health checks; check
-reports PASS for the ordinary service and management-access checks. login opens
-the management workstation. From there, try curl http://web-01.dmz/.
-
-After leaving that shell, stop the prototype explicitly:
-
-```sh
-./range down --volumes
-```
-
-This discards target changes and database data after saving logs. Images, access
-keys and saved logs remain. Exiting the workstation alone does not stop the
-prototype. See the [user guide](docs/users.md) for endpoints, credentials, browser
-access, reset behaviour and troubleshooting.
-
-## Intended use
-
-The finished user interface will create one fresh session on explicit invocation,
-provide access to its isolated network, and destroy session containers, networks,
-temporary credentials and mutable data when the session ends. Evidence export
-will be explicit. No boot, login or scheduled range startup is intended.
-
-Sysbox will host a separate Docker daemon inside the disposable envelope. The
-host Docker socket will remain outside the range. The shared server's existing
-Docker configuration and workloads must be preserved during setup.
-
-## Documentation
-
-- [User guide](docs/users.md): current prototype commands and planned session use.
-- [Service coverage](docs/services.md): what exists and what remains to integrate.
-- [Operator guide](docs/operators.md): installation boundary and Git deployment.
-- [Architecture](docs/architecture.md): encapsulation and lifecycle design.
-- [Contributing](CONTRIBUTING.md): changes, tests and attribution.
-- [Validation record](docs/validation.md): what has actually been checked.
-
-## Sources and licence
-
-Our original code and documentation use the [MIT licence](LICENSE). Third-party
-components retain their own licences. See [third-party notices](THIRD_PARTY_NOTICES.md)
-and [source revisions](sources.json).
-
-Required upstream copyright, licensing and source-revision information is
-recorded in the notices and manifest linked above. Clone with --recurse-submodules
-to obtain pinned dependencies.

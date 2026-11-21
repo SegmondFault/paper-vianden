@@ -1,0 +1,5 @@
+#!/bin/sh
+# This fixed command stops the range unit only, never the host Docker service.
+set -eu
+if [ "$#" -ne 0 ]; then echo 'Usage: stop-range' >&2; exit 2; fi
+exec sudo /usr/local/bin/paper-vianden stop
