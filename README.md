@@ -4,7 +4,7 @@ An on-demand, disposable network for attack and defence testing.
 
 One Sysbox system container runs 22 service and workstation containers across
 management, DMZ and internal networks. Python owns the lifecycle; Docker Compose
-describes services. There is no model runtime or agent code.
+describes services. 
 
 ## Use an installed range
 
