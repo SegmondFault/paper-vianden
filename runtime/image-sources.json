@@ -4,7 +4,7 @@
     "config_id": "sha256:56a645c89d3ac713486bddc2b4e83fb08a2611b6a5368deb5319eb7f7faaf27f"
   },
   "paper-vianden/ids:local": {
-    "reference": "jasonish/suricata@sha256:d5a3a1785299ab40918d465e54fedf8e3afeeedba76bb64dbc20bda2c3",
+    "reference": "jasonish/suricata@sha256:d5a3a1785299ab40918d465e54fedf8e3afeeedba76bb64b0cc74dbc20bda2c3",
     "config_id": "sha256:c297ff467e7681dd594a0cde2b076e7fc5adfcb4381c6ba7ffc85600d7ca22a4"
   }
 }
