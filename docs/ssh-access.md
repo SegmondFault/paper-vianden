@@ -21,7 +21,7 @@ A human runs `range claim` to create a named, time-limited reservation. The
 command prints a reservation code in its JSON `token` field; the human keeps
 that code and supplies it with the existing `--token` option to
 start/reset/stop/release the one shared exercise. See the
-[Quickstart](../QUICKSTART.md#1-blue-team-with-the-pre-programmed-scenario) for the
+[operator quickstart](../OPERATOR_QUICKSTART.md#1-reserve-the-exercise) for the
 exact commands. Agent accounts do not need the reservation code.
 Agent logins never start scenarios. The reservation is independent of SSH
 sessions: 16 concurrent workstation sessions per account are allowed by default.

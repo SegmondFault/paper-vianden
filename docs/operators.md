@@ -1,4 +1,9 @@
-# Operator guide
+# Server administrator guide
+
+This guide covers building, installing, updating and recovering the server.
+For running an exercise on an existing deployment, use the
+[operator quickstart](../OPERATOR_QUICKSTART.md). Agent participants use the
+[participant quickstart](../QUICKSTART.md).
 
 ## Prepare a release
 
@@ -61,8 +66,9 @@ Docker and unrelated workloads kept their PID/start/restart state. Test shell
 exit, explicit stop and fresh fixture restoration before shared use.
 
 Only one session is allowed. Joining cannot start it. The control console
-manages inner containers without exposing the host socket. Users must export
-needed evidence explicitly before stopping.
+manages inner containers without exposing the host socket. Normal teardown
+attempts a bounded evidence export. Exercise operators should explicitly export
+and download important results using the [operator quickstart](../OPERATOR_QUICKSTART.md).
 
 ## Current access/lifecycle limits
 

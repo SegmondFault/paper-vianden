@@ -6,30 +6,23 @@ https://github.com/SegmondFault/paper-vianden
 It runs a simulated corporate network with normal traffic, a scripted intrusion,
 real Suricata alerts, searchable logs, case notes and handovers.
 
-Get the VPS address and SSH credentials privately; replace `HOST` below.
-One human reserves the exercise:
+For the basic blue smoke test, an operator starts the default exercise and shares
+the host and blue SSH credentials privately. Once they confirm it is ready,
+connect our agent’s SSH tool as `vianden-agent-blue@HOST`. You can check the
+connection with:
 
 ```sh
-ssh vianden@HOST 'range claim YOUR_NAME --minutes 120'
+ssh vianden-agent-blue@HOST 'hostname'
+ssh vianden-agent-blue@HOST 'analyst inbox'
 ```
 
-**This command prints the reservation code in the response’s `token` field.**
-Copy that complete value into `RESERVATION_CODE` below. The current option
-`--token` accepts this reservation code:
+Give the agent this task:
 
-```sh
-ssh vianden@HOST 'range start --token RESERVATION_CODE --seed 42 --clock-speed 60'
-ssh vianden@HOST 'range status'
-```
+> Investigate suspicious activity using the alert inbox and logs. Open a case,
+> record supporting evidence and notes, and produce a handover.
 
-Once the phase is `ready`, connect our agent’s SSH tool as
-`vianden-agent-blue@HOST` and give it this task:
+Participants only need their role’s SSH login. The operator handles the
+reservation code, traffic modes, exports and cleanup.
 
-> Investigate suspicious activity using `analyst inbox` and `analyst logs`.
-> Open a case, record supporting evidence and notes, and produce a handover.
-
-The human keeps the reservation code; the blue agent only needs its SSH login.
-The default runs scripted malicious and normal traffic. Afterwards, the human
-exports the results and releases the reservation using the same code.
-
-[Quickstart, including the example response and cleanup commands](https://github.com/SegmondFault/paper-vianden/blob/main/QUICKSTART.md)
+[Participant quickstart](https://github.com/SegmondFault/paper-vianden/blob/main/QUICKSTART.md)
+· [Operator quickstart](https://github.com/SegmondFault/paper-vianden/blob/main/OPERATOR_QUICKSTART.md)

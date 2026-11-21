@@ -4,7 +4,10 @@ The SOC model and orchestration run outside the range. The supplied SSH adapter
 and acceptance rehearsal are scripted clients; they test the response interface,
 not a model's judgement.
 
-For the ordered blue → red → green walkthrough, start with the [Quickstart](../QUICKSTART.md).
+Participants should start with the [participant quickstart](../QUICKSTART.md).
+Human exercise owners use the [operator quickstart](../OPERATOR_QUICKSTART.md)
+for reservation codes, traffic modes, observation and cleanup. This reference
+covers the interfaces and acceptance rehearsals in more detail.
 
 ## Human exercise gate
 
@@ -20,7 +23,7 @@ ssh human@range.example 'range start --token RESERVATION_CODE --seed 42 --clock-
 `range claim` generates the reservation code and returns it in the JSON `token`
 field. Copy its complete value into `RESERVATION_CODE`; the existing CLI option
 `--token` accepts that code. Keep it with the human operator. See the
-[Quickstart](../QUICKSTART.md#1-blue-team-with-the-pre-programmed-scenario) for an
+[operator quickstart](../OPERATOR_QUICKSTART.md#1-reserve-the-exercise) for an
 example response and the full steps.
 
 Cold startup takes several minutes; `range status` reports `phase: ready`.

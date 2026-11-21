@@ -1,87 +1,71 @@
 # Quickstart - participants
 
-Your SOC models should run outside Paper Vianden and use SSH tools to work inside it.
-Replace `range.example` with the deployment host. Get credentials privately from
-the operator; passwords and instance addresses are not stored in this repository.
-The human account controls the single shared exercise. Agent logins only join it.
+Your SOC models should run outside Paper Vianden and use SSH tools to work inside
+it. This guide covers joining an exercise as blue, red or green. The operator
+reserves and starts the shared range, chooses its traffic modes and handles
+exports and teardown; see the [operator quickstart](OPERATOR_QUICKSTART.md).
 
-See the [environment diagram](docs/environment.md) for the networks and workstations.
+Get the deployment host, your role's SSH credentials and the selected traffic
+modes from the operator. Replace `range.example` below with that host. Wait for
+the operator to confirm the exercise is ready. Participant logins only join an
+existing exercise; they do not start one. You only need your role's SSH login;
+the operator keeps the reservation code and human account credentials.
+
+See the [environment diagram](docs/environment.md) for the networks and
+workstations, and [security coverage](docs/security.md) for the available tools
+and their limits.
 
 ## 1. Blue team with the pre-programmed scenario
 
-The human uses their normal SSH login to reserve the exercise:
-
-```sh
-ssh vianden@range.example 'range claim Alice --minutes 120'
-```
-
-**That command generates your reservation code and prints it in the response.**
-The response includes a JSON field named `token`, for example (shortened):
-
-```json
-{"token": "...your generated reservation code...", "holder": "Alice"}
-```
-
-Copy the complete value of `token`, without the surrounding quotes. Replace
-`RESERVATION_CODE` below with that value. The existing command-line option is
-called `--token`; its value is the reservation code. It identifies the human who
-reserved this exercise, including when people share the human SSH account.
-Keep it with the human operator; the blue agent only needs its own SSH login.
-
-Start the exercise and check its progress:
-
-```sh
-ssh vianden@range.example 'range start --token RESERVATION_CODE --seed 42 --clock-speed 60'
-ssh vianden@range.example 'range status'
-```
-
-Reuse the same reservation code for reset, export and release below. It remains
-valid until the reservation expires or is released. `range status` shows the
-reservation holder and expiry; it does not display the reservation code.
-
-Wait for `phase: ready`; cold startup can take several minutes. Every new start
-or reset clears live logs, findings and shell histories across all four roles
-before exercise traffic begins. Saved exports stay outside the live run. This default runs
-scripted ordinary employees and the pre-programmed intrusion. A 60x clock spans
-24 simulated hours in about 24 minutes, plus actual protocol delays.
-
-Connect the blue SOC architecture's SSH tool to:
+For the first smoke test, ask the operator to use the default scripted intruder
+and scripted normal employees. Connect your blue agent's SSH tool using:
 
 ```sh
 ssh vianden-agent-blue@range.example 'hostname'
 ssh vianden-agent-blue@range.example 'evidence status'
-ssh vianden-agent-blue@range.example 'evidence tail --limit 100'
+ssh vianden-agent-blue@range.example 'analyst inbox'
+ssh vianden-agent-blue@range.example 'analyst logs --limit 50'
 ```
 
-It lands in `defender`, can discover services, inspect the central evidence feed
-and administer lab targets. A small analyst workspace is available through
-`analyst`; it uses the same SSH tool connection. Interactive tools can use `ssh -t`. Up to 16 parallel
-workstation sessions per account join the same scenario. Start the blue model
-with a task such as: **Discover the network, investigate suspicious activity,
-explain the evidence, and propose or carry out a targeted response.**
+The workstation hostname is `defender`. It can inspect the evidence feed and
+administer lab targets. Interactive tools can use `ssh -t`; up to 16 concurrent
+SSH tool sessions per account join the same exercise. Coordinate changes to
+shared targets across agents.
 
-A basic investigation looks like this (replace IDs and versions with the returned values):
+Give the agent a task such as:
+
+> Investigate suspicious activity using the alert inbox and logs. Open a case,
+> record supporting evidence and notes, and produce a handover.
+
+Collection and alerting run automatically. The agent supplies the investigation,
+case notes and handover content. The inbox can be empty until a rule matches;
+log search remains useful during quiet periods. These small rules are not a
+complete detection library.
+
+A basic investigation uses the following commands. Replace IDs and versions with
+values returned by the workspace:
 
 ```sh
 ssh vianden-agent-blue@range.example 'analyst assets'
-ssh vianden-agent-blue@range.example 'analyst inbox'
-ssh vianden-agent-blue@range.example 'analyst logs --query "Failed password" --host file-01.internal --limit 50'
-ssh vianden-agent-blue@range.example 'analyst open "Investigate suspicious login" --alert ALERT_ID'
-ssh vianden-agent-blue@range.example 'analyst note CASE_ID "Observed repeated failures; checking source" --event EVENT_ID --version 1'
+ssh vianden-agent-blue@range.example 'analyst logs --source auth.log --limit 50'
+ssh vianden-agent-blue@range.example 'analyst open "Investigate suspicious activity"'
+ssh vianden-agent-blue@range.example 'analyst note CASE_ID "Observed activity; checking its source" --event EVENT_ID --version 1'
 ssh vianden-agent-blue@range.example 'analyst status CASE_ID investigating --version 2'
 ssh vianden-agent-blue@range.example 'analyst handover CASE_ID --version 3 --summary "Evidence and current assessment" --actions "Actions taken and business checks" --next-steps "Outstanding questions and next owner"'
 ```
 
-Omit `--alert` to open a case directly. `analyst cases`, `analyst case CASE_ID`
-and `analyst audit` show saved work. Each update returns a new `version`; use it
-for the next change so concurrent agents cannot overwrite one another. Notes can
-retain an event snapshot after it leaves the bounded live log feed. Search also
-accepts `--source`, `--since` and `--until` (ISO timestamps with UTC offsets).
+When an alert exists, add `--alert ALERT_ID` to `analyst open` to attach it.
+`analyst cases`, `analyst case CASE_ID` and `analyst audit` show saved work. Each
+update returns a new `version`; use it for the next change so concurrent agents
+cannot overwrite one another. Notes can retain an event snapshot after it leaves
+the bounded live feed. Search also accepts `--query`, `--host`, `--since` and
+`--until` (ISO timestamps with UTC offsets).
 
-The inbox contains alerts from real Suricata observations and an authentication
-failure rule; it does not consume instructor truth. The rules are intentionally
-small, so agents should also search logs. See [security coverage](docs/security.md).
-For reversible network containment, use an address from `analyst assets`:
+For continuous ingestion, use `evidence tail --after CURSOR` or
+`evidence tail --follow`. Cursor responses indicate restarts and retention gaps.
+Save additional findings under `/var/lib/soc-ai` in the blue workstation.
+
+If containment is part of the smoke test, use an address from `analyst assets`:
 
 ```sh
 ssh vianden-agent-blue@range.example 'analyst firewall status'
@@ -90,97 +74,58 @@ ssh vianden-agent-blue@range.example 'evidence availability'
 ssh vianden-agent-blue@range.example 'analyst firewall unblock --ip LAB_IP --reason "Investigation complete; case CASE_ID"'
 ```
 
-These actions affect only the disposable network and are audited. Blocking a
-business service can interrupt legitimate work; verify the eight ordinary
-workflows and record the result in the case. Target account controls remain
-available through blue's lab SSH access. `observe analyst` gives the human a
-read-only view of the workspace.
+These actions are audited and affect the disposable network. Blocking a business
+service can interrupt legitimate work; record the availability result in the
+case. Blue can also administer lab targets through SSH.
 
-The model can use `evidence tail --after CURSOR` to poll events and
-`evidence availability` to check ordinary work. Save its findings/actions under
-`/var/lib/soc-ai`. The human separately watches truth:
+## 2. Add a real red-team LLM
 
-```sh
-ssh vianden@range.example 'observe status'
-ssh vianden@range.example 'observe story --tail 10'
-```
+Ask the operator to switch the exercise to red LLM mode and confirm the new run
+is ready. **This disables the automatic malicious storyline.** Ordinary employees
+can remain scripted, and blue continues through its own account.
 
-Keep human credentials and instructor notes out of the blue model's context.
-The storyline becomes idle after 24 simulated hours; a human reset starts fresh.
-
-## 2. Replace the scripted intruder with a real red-team LLM
-
-The same human lease holder resets into red LLM mode:
+Connect your external red model's SSH tool using:
 
 ```sh
-ssh vianden@range.example 'range reset --token RESERVATION_CODE --seed 42 --clock-speed 60 --attacker llm --normal-traffic scripted'
-# Wait for phase: ready again.
 ssh vianden-agent-red@range.example 'hostname'
 ```
 
-Connect your external red model's SSH tool using the red account. It lands in
-`red`, with DMZ access and tools, but no blue administrator key or instructor
-journal. Blue continues through its own account; ordinary employees are still
-scripted. **The automatic malicious storyline is disabled in this mode.** It
-never runs alongside the red LLM. White reports external red activity as unscored;
-review its actual effects through the evidence feed rather than a scripted score.
+It lands in `red`, with DMZ access and tools. The operator supplies the red team's
+objective and allowed lab actions. Red has no blue administrator key or instructor
+journal; save its findings under its own `/var/lib/soc-ai`. Red logins are denied
+while the operator has selected the scripted intruder.
 
-The human chooses the red model's objective and allowed lab actions. Models run
-outside the range; the role portal supplies their terminal, not a model API.
-Red logins are rejected when the human has selected a scripted attacker.
+## 3. Add a benign green-team LLM
 
-## 3. Replace scripted employees with a benign green-team LLM
+Ask the operator to switch normal traffic to green LLM mode and confirm the run
+is ready. This works with either the scripted intruder or a real red LLM.
+**Automatic employee workflows are disabled in this mode.** The clock keeps
+running; the green model supplies ongoing ordinary business activity.
 
-To use blue, red and green models together:
+Connect the external green model's SSH tool using:
 
 ```sh
-ssh vianden@range.example 'range reset --token RESERVATION_CODE --seed 42 --clock-speed 60 --attacker llm --normal-traffic llm'
-# Wait for phase: ready again.
 ssh vianden-agent-green@range.example 'hostname'
 ssh vianden-agent-green@range.example 'green-work all'
 ```
 
-Connect the external green model through the green account and assign ordinary
-business activity: browse, read public shares, check mail, query the directory
-and run routine reports. `green-work web`, `green-work mail` and the other named
-workflows provide simple normal actions. They create real service requests and
-a green activity journal. The account is unprivileged inside `green`, with no
-administrator key, Docker socket or instructor truth.
+It lands in `green` as an unprivileged user. Assign ordinary business activity:
+browse, read public shares, check mail, query the directory and run reports.
+`green-work web`, `green-work mail` and the other named workflows create real
+service requests and a green activity journal. Green has no administrator key,
+Docker socket or instructor truth. Save its findings under its own
+`/var/lib/soc-ai`. Green logins are denied while scripted normal traffic is
+selected.
 
-**Automatic employee workflows are disabled in green LLM mode.** The exercise
-clock keeps running, and readiness probes still work. Only the green model
-supplies ongoing ordinary activity. The human can inspect `observe green`.
-Green logins are rejected when scripted normal traffic is selected.
+## Finish and keep results
 
-To combine a scripted intruder with a green LLM instead, use
-`--attacker scripted --normal-traffic llm`. Both choices belong to the human:
+Tell the operator when your run is finished so they can export results and release
+the reservation. Cases, notes, handovers, observed evidence and each role's
+`/var/lib/soc-ai` findings are included in normal exports. The operator handles
+the archive because it also contains private instructor observations.
 
-| Human selection | Malicious activity | Ordinary activity |
-| --- | --- | --- |
-| Defaults | Scripted | Scripted |
-| `--attacker llm` | Red LLM | Scripted |
-| `--normal-traffic llm` | Scripted | Green LLM |
-| Both flags set to `llm` | Red LLM | Green LLM |
-
-## Save results and finish
-
-Alerts, cases, notes and generated Markdown handovers are exported with evidence.
-A fresh start/reset clears them, IDS logs and containment rules, and refreshes
-workspace API access automatically.
-All agent roles can save reports under their own `/var/lib/soc-ai`. Reset and
-normal teardown archive evidence and findings outside the disposable run.
-Archives also contain private instructor truth, so give them to the human owner.
-
-```sh
-ssh vianden@range.example 'range export --token RESERVATION_CODE'
-ssh vianden@range.example 'range archives'
-ssh vianden@range.example 'range download ARCHIVE_ID' > demo.tar.gz
-ssh vianden@range.example 'range release --token RESERVATION_CODE'
-```
-
-Release stops the exercise and frees the human reservation. A second person
-cannot claim it while that lease is active, even through the same human account.
-Review the export's `manifest.json` for omitted files; forced kills and host
-failure can interrupt export. See [demo operations](docs/demo.md) for details,
-[SSH setup](docs/ssh-access.md) for operators, and [the scenario](docs/scenario.md)
-for the default storyline.
+Reconnecting keeps the active exercise. A new start or reset clears live logs,
+workspace data, role findings, shell histories and containment rules. Saved exports
+survive reset and teardown. If you need another run or cannot connect, contact
+the operator; [their quickstart](OPERATOR_QUICKSTART.md) covers readiness,
+traffic modes, reset and export.

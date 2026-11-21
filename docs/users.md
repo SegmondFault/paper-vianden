@@ -1,11 +1,13 @@
-# Using the disposable range
+# Legacy foreground workflow and service reference
 
 ## Role-bound SSH access
 
-For agent/human portal deployments, follow [SSH workstation access](ssh-access.md):
-agent accounts enter blue directly, humans enter read-only white, and connections
-share a human-reserved managed run that survives disconnects until its lease expires. The
-operator-owned foreground workflow below remains supported separately.
+For current role portals, participants should follow the
+[participant quickstart](../QUICKSTART.md); human exercise owners use the
+[operator quickstart](../OPERATOR_QUICKSTART.md). Blue, red and green accounts
+enter their own workstations, while humans enter read-only white. Connections
+share one managed run that survives disconnects until its reservation expires.
+The foreground workflow below is a separate legacy access method.
 
 ## Start and finish
 
@@ -100,7 +102,9 @@ its SMTP sender to use mail-sink.dmz:1025; mail stays in the captured inbox.
 
 The blue key reaches the prototype Linux targets and custom FTP, mail, badge
 and binary targets over SSH. Use control for other containers. Captures see the
-interface on which you capture; there is no central mirror. The disposable
+interface on which you capture; there is no whole-network packet mirror.
+The passive Suricata sensor observes the DMZ/internal bridges and sends events
+to the central evidence feed and alert inbox. The disposable
 runtime includes a lightweight [synthetic user scenario](#simulated-users-and-storyline).
 
 ## Simulated users and storyline
@@ -149,7 +153,9 @@ The raw DNS journal mixes office lookups with other range-local DNS activity;
 it contains timestamps, source IPs and query names, not attack labels or alerts.
 Correlate it with actual target authentication/application/database logs, target
 artifacts and packet captures. Capture on the relevant host/interface: there is
-no whole-network traffic mirror, central alert feed, SOC dashboard or scoring.
+no whole-network traffic mirror or automated analyst scoring. The central
+`evidence` feed and `analyst` tools supply log search, an alert inbox, cases and
+handovers; see the [participant quickstart](../QUICKSTART.md).
 
 The blue workstation deliberately has no mounted story source, schedule or
 answer journal. [Instructor notes](scenario-instructors.md) contain spoilers;

@@ -9,15 +9,19 @@ One Sysbox system container runs 29 service and workstation containers across
 management, DMZ and internal networks. Python owns the lifecycle; Docker Compose
 describes services. 
 
-**Start with the [Quickstart](QUICKSTART.md): blue + scripted scenario, then red LLM, then green LLM.**
+Start with the guide for your role:
+
+- [Participants](QUICKSTART.md): connect blue, red and green agents to an existing exercise.
+- [Exercise operators](OPERATOR_QUICKSTART.md): reserve, start, select traffic modes, observe, export and finish.
+- [Server administrators](docs/operators.md): build, install, update and recover the deployment.
 
 [Environment diagram and network membership](docs/environment.md).
 [Short team message with basic smoke-test instructions](docs/team-message.md).
 
 ## SSH access
 
-Configured agent accounts land directly in the **blue workstation**; separate
-human accounts land in the read-only **white workstation**. Both interactive
+Blue, red and green SSH accounts enter their fixed role workstations; the human
+operator enters the read-only **white workstation**. Both interactive
 SSH and command-per-connection agents are supported, including parallel tools.
 A human claims a demo lease and explicitly starts its managed run; reconnecting
 does not destroy it. No LLM is hosted by the range. See
@@ -66,7 +70,7 @@ The outer container has a 4 CPU, 6 GiB RAM and 2,048-task cap; the whole session
 service has a 7 GiB ceiling. Mutable storage has a 32 GiB filesystem limit.
 Images remain cached separately. Sysbox shares the host kernel; it is not a VM.
 
-Read the [operator guide](docs/operators.md), [architecture](docs/architecture.md)
+Read the [server administrator guide](docs/operators.md), [architecture](docs/architecture.md)
 and [validation record](docs/validation.md). Native amd64 protocol, reset and
 cleanup checks pass. A separately tested [local prototype](docs/prototype.md)
 remains available for development.
