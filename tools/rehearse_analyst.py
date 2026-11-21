@@ -25,6 +25,10 @@ def main():
             time.sleep(3)
         raise RuntimeError('Range did not become ready')
     def py(role,source):return client.run(role,'python3 -c '+shlex.quote(source)).stdout
+    def business():
+        assert client.json('blue','evidence availability')['ok']
+        assert client.json('green','green-work all')['ok']
+
     def web(role,success):
         code="import urllib.request; urllib.request.urlopen('http://web-01.dmz/?q=union%20select',timeout=3).read(128)"
         result=client.run(role,'python3 -c '+shlex.quote(code),check=False)
@@ -33,7 +37,7 @@ def main():
         control('start --seed 42 --clock-speed 60 --attacker llm --normal-traffic llm');ready()
         assert client.json('blue','analyst inbox')==[]
         assert client.json('blue','analyst cases')==[]
-        assert client.json('blue','evidence availability')['ok']
+        business()
         assets=client.json('blue','analyst assets')
         red=next(x['addresses']['dmz'] for x in assets if x['service']=='red')
         telemetry=next(x['addresses']['management'] for x in assets if x['service']=='telemetry')
@@ -65,7 +69,7 @@ def main():
         assert client.run('blue',note,check=False).returncode!=0
         client.json('blue','analyst firewall block --ip '+red+' --reason '+shlex.quote('Contain observed source; case '+ident))
         web('red',False)
-        assert client.json('blue','evidence availability')['ok']
+        business()
         client.json('blue','analyst firewall unblock --ip '+red+' --reason '+shlex.quote('Restore source after verification; case '+ident))
         web('red',True)
         report['checks']['reversible_containment_and_eight_business_checks']=True
@@ -86,12 +90,13 @@ def main():
             assert not any('token' in name for name in names)
         path=out/(saved['id']+'.tar.gz');path.write_bytes(content);path.chmod(0o600)
         report['checks']['workspace_ids_and_firewall_export']=True
+        print('Passed IDS, analyst handover, containment and export; checking clean reset',flush=True)
         control('reset --seed 43 --clock-speed 60 --attacker llm --normal-traffic llm');ready()
         assert client.json('blue','analyst cases')==[] and client.json('blue','analyst inbox')==[]
         assert client.json('blue','analyst firewall status')['blocked']==[]
         assert before!=py('blue',"from pathlib import Path; print(Path('/run/analyst/token').read_text().strip())").strip()
         web('red',True)
-        assert client.json('blue','evidence availability')['ok']
+        business()
         old=client.run('human','range download '+saved['id'],binary=True).stdout
         assert old==content
         report['checks']['reset_clears_workspace_blocks_and_token_preserves_export']=True

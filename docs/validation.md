@@ -1,6 +1,60 @@
 # Validation record
 
-## Current demo acceptance — 21 November 2026
+## Current analyst workspace acceptance — 21 November 2026
+
+The installed executable runtime is revision `0e22b93`. Later documentation and
+acceptance-harness updates do not change that executable code.
+
+All **56 unit tests pass on native Linux AMD64 on the VPS**, as well as on the
+Mac development host. The suite includes real loopback HTTP authorization tests,
+case evidence retention/export, concurrent version conflicts, workspace capacity
+rollback and the private-namespace guard. Suricata's configuration and four rules
+also pass its own `-T` check with the production read-only filesystem and restricted
+capabilities.
+
+The native `tools/rehearse_analyst.py` run passed through the real role portals:
+
+- A real HTTP request raised a Suricata alert with the actual source address and
+  reached both the alert inbox and log search.
+- A case retained selected evidence, accepted notes and a Markdown handover,
+  rejected a stale version update and appeared in white's read-only snapshot.
+- DMZ requests to internal SSH and the management evidence API were denied.
+  An unauthenticated workspace request from blue was also rejected.
+- Blocking the observed red source stopped its HTTP requests; unblock restored
+  them. All eight ordinary-work probes remained successful. A separate check
+  through the actual green workstation also passed all eight workflows across
+  the enforced network policy.
+- Export contained the case, handover, raw IDS observations and firewall actions,
+  with no omissions and no access token. After a fresh reset, cases/inbox and
+  containment blocks were empty, the token changed, business checks passed and
+  the previous export remained downloadable unchanged.
+
+The scripted response regression also passed on this revision: blue locked the
+file-host fixture account through SSH, the intruder objective remained incomplete,
+and all eight ordinary-work probes stayed successful. The human lease rejected a
+competing claim, parallel blue tool sessions worked and agent lifecycle control
+was denied. Export retained the response findings and instructor observations.
+
+The four-mode portal rehearsal passed scripted/scripted, red LLM/scripted,
+red LLM/green LLM and scripted/green LLM. Each mode passed all eight ordinary-work
+probes; both green configurations also passed `green-work all` from the actual
+green workstation. Role gates, disabled automatic actors, concurrent blue tools,
+read-only unprivileged white and private findings exports all passed. Every export
+manifest reported no omissions. Final release left no active state or Sysbox
+helpers, and agent logins did not restart the exercise.
+
+The active firewall/IDS namespace was verified distinct from the VPS namespace.
+The original host Docker/containerd PID, start and restart state stayed unchanged.
+Normalized VPS firewall rules matched during the active run and after teardown.
+Reproduce with `tools/rehearse_analyst.py`, `tools/rehearse_demo.py` and
+`tools/rehearse_roles.py`; private reports and exports stay under ignored `local/`.
+
+These are scripted interface checks, not a measurement of an LLM's judgement.
+Detection coverage, analyst grading and optional flags remain stretch work in
+the [roadmap](development-notes.md). See the [coverage guide](security.md) for the
+implemented corporate/SOC features and the components not included.
+
+## Earlier portal acceptance — 21 November 2026
 
 The installed runtime is revision `1d19ea8`. Documentation-only updates record
 these results without changing the installed executable code.
