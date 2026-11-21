@@ -32,6 +32,8 @@ def main():
     parser.add_argument('--skip-build', action='store_true')
     args = parser.parse_args()
     subprocess.run(['python3', str(ROOT/'tools/check_public_tree.py')], check=True)
+    if subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT):
+        raise SystemExit('Build a clean, committed public revision.')
     sub = ROOT/'upstream/ethical-hacking-docker-labs'
     expected = subprocess.check_output(['git', 'rev-parse', 'HEAD:upstream/ethical-hacking-docker-labs'], cwd=ROOT).strip()
     actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=sub).strip()
