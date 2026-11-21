@@ -87,7 +87,8 @@ provided by the server wrapper. Use terminal HTTP clients for initial tests.
 The campaign administrator's generated fixture password is in the control
 console's `docker logs paper-vianden-phishing-1 2>&1`; it changes each session.
 All listed passwords are public fixtures, not server credentials. SMB and SSH
-use different passwords for sysadmin.
+use different passwords for sysadmin. For internal campaign delivery, configure
+its SMTP sender to use mail-sink.dmz:1025; mail stays in the captured inbox.
 
 The blue key reaches the prototype Linux targets and custom FTP, mail, badge
 and binary targets over SSH. Use control for other containers. Captures see the

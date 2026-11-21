@@ -45,6 +45,10 @@ def main():
                       '-f', 'prototype/docker-compose.yml', '-f', 'compose.yaml']
     def run(argv, **kw):
         return subprocess.run(argv, cwd=ROOT, env=env, check=True, **kw)
+    image_sources = json.loads((ROOT/'runtime/image-sources.json').read_text())
+    for alias, source in image_sources.items():
+        run(docker+['pull', source['reference']])
+        run(docker+['tag', source['reference'], alias])
     if not args.skip_build:
         for target, tag in [('target-base', 'target-base'), ('workstation', 'workstation-base')]:
             run(docker+['build', '--platform=linux/amd64', '--target', target,
@@ -88,7 +92,7 @@ def main():
         raise RuntimeError('FUSE helper checksum mismatch')
     manifest = {'architecture': 'amd64', 'services': len(cfg['services']),
                 'source_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
-                'images': images, 'files': {name: sha(out/name) for name in
+                'images': images, 'source_images': image_sources, 'files': {name: sha(out/name) for name in
                     ['targets.tar.gz', 'envelope.tar.gz', 'source.tar.gz', 'sysbox.deb', 'fuse3.deb']}}
     (out/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     print('Prepared offline library under artifacts/. No range was started.')

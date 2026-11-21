@@ -29,8 +29,14 @@ def main():
             time.sleep(.5)
         else:
             raise RuntimeError('Inner Docker did not become ready')
+        print('Loading offline target images...', flush=True)
         run(['docker', 'load', '-i', '/library/targets.tar.gz'], stdout=subprocess.DEVNULL)
+        # Docker's archive format does not retain repository digest references.
+        # Restore a stable local alias from the pinned image's config identity.
+        for alias, source in json.loads((ROOT/'runtime/image-sources.json').read_text()).items():
+            run(['docker', 'tag', source['config_id'], alias])
         run(['python3', str(ROOT/'prototype/range'), 'init'])
+        print('Starting the seeded service network...', flush=True)
         run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--wait', '--wait-timeout', '180'])
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
                      '/opt/paper-vianden/runtime/initialise.py'])

@@ -5,5 +5,5 @@ COPY prototype/ ./prototype/
 COPY upstream/ethical-hacking-docker-labs/ ./upstream/ethical-hacking-docker-labs/
 COPY compose.yaml ./compose.yaml
 COPY runtime/ ./runtime/
-ENV DOCKER_TLS_CERTDIR="" RANGE_PROJECT=paper-vianden
-ENTRYPOINT ["python3", "/opt/paper-vianden/runtime/inside.py"]
+ENV DOCKER_TLS_CERTDIR="" RANGE_PROJECT=paper-vianden COMPOSE_PARALLEL_LIMIT=2
+ENTRYPOINT ["python3", "-u", "/opt/paper-vianden/runtime/inside.py"]

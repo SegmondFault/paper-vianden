@@ -1,0 +1,6 @@
+{
+  "paper-vianden/dvwa:local": {
+    "reference": "ghcr.io/digininja/dvwa@sha256:c7e272f2b6b617bd4446ee5439f525f8ba562c46ac9b1787609b45b68591d0f8",
+    "config_id": "sha256:56a645c89d3ac713486bddc2b4e83fb08a2611b6a5368deb5319eb7f7faaf27f"
+  }
+}

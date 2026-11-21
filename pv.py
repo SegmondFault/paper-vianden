@@ -157,6 +157,7 @@ def run_session(args):
     mounted = False
     failure = None
     container_created = False
+    follower = None
     try:
         group = next(line.split('::', 1)[1].strip() for line in
                      Path('/proc/self/cgroup').read_text().splitlines() if line.startswith('0::'))
@@ -234,6 +235,8 @@ def run_session(args):
                         'paper-vianden/envelope:local'], stdout=subprocess.DEVNULL)
         container_created = True
         command(DOCKER+['start', name], stdout=subprocess.DEVNULL)
+        follower = subprocess.Popen(DOCKER+['logs', '--follow', name], env=ENV,
+                                    preexec_fn=die_with_parent)
         (RUNTIME/'active.json').write_text(json.dumps({'name': name, 'pid': os.getpid(),
                                                       'source': manifest.get('source_revision')}))
         def ready():
@@ -269,6 +272,10 @@ def run_session(args):
                 stderr=subprocess.DEVNULL).returncode == 0):
             cleanup_ok = subprocess.run(DOCKER+['rm', '-f', '-v', name], env=ENV,
                                         stdout=subprocess.DEVNULL).returncode == 0
+        if follower is not None:
+            if follower.poll() is None:
+                follower.terminate()
+            follower.wait(timeout=10)
         for process in reversed(processes):
             if process.poll() is None:
                 process.terminate()
