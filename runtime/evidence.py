@@ -257,7 +257,7 @@ def handler(feed):
                     data=feed.workspace.read(url.path.rsplit('/',1)[-1],query.get('id',[''])[0])
                 else: self.send_error(404); return
                 self.reply(data)
-            except (ValueError, IndexError): self.send_error(400)
+            except (ValueError, IndexError) as error: self.reply({'error':str(error)},400)
         def do_POST(self):
             if not self.authorized(): return
             try:
@@ -266,6 +266,7 @@ def handler(feed):
                 size=int(self.headers.get('Content-Length','0'))
                 if not 1<=size<=20000: raise ValueError('Request body too large or missing')
                 data=json.loads(self.rfile.read(size)); action=self.path.rsplit('/',1)[-1]
+                if not isinstance(data,dict): raise ValueError('Expected a JSON object')
                 if action=='firewall':
                     config=json.loads(Path('/run/corporate/control.json').read_text())
                     req=urllib.request.Request(config['url'], data=json.dumps(data).encode(),

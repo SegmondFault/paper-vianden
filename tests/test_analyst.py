@@ -84,4 +84,29 @@ class AnalystTests(unittest.TestCase):
             finally:server.shutdown();server.server_close();thread.join()
 
 
+class PrivateNamespaceTests(unittest.TestCase):
+    def test_firewall_guard_uses_active_kernel_namespace_and_refuses_host(self):
+        from unittest.mock import patch
+        import corporate
+        with patch.object(corporate.os,'geteuid',return_value=0),patch.object(corporate,'command',return_value=''):
+            with patch.object(corporate.socket,'if_nameindex',return_value=[(1,'lo'),(2,'docker0')]):corporate.guard()
+            with patch.object(corporate.socket,'if_nameindex',return_value=[(1,'lo'),(2,'eth0')]):
+                with self.assertRaises(RuntimeError):corporate.guard()
+        with patch.object(corporate.os,'geteuid',return_value=0),patch.object(corporate.socket,'if_nameindex',return_value=[(1,'lo')]),patch.object(corporate,'command',return_value='default via 192.0.2.1'):
+            with self.assertRaises(RuntimeError):corporate.guard()
+
+    def test_full_workspace_does_not_drop_existing_alerts_or_partial_case_writes(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            feed=Feed(tmp); fields={'event_type':'alert','alert':{'signature_id':9000002}}
+            feed.append('ids','eve','first',fields)
+            before=feed.workspace.read('inbox')
+            with patch.object(feed.workspace,'save',side_effect=ValueError('capacity')):
+                feed.append('ids','eve','second',fields)
+                self.assertEqual(feed.workspace.read('inbox'),before)
+                with self.assertRaises(ValueError):feed.workspace.mutate('open',{'title':'Cannot save'})
+                self.assertEqual(feed.workspace.read('cases'),[])
+            self.assertTrue(feed.workspace.saturated)
+
+
 if __name__=='__main__':unittest.main()

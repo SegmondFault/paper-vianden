@@ -3,6 +3,7 @@
 import argparse
 import json
 from pathlib import Path
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -14,7 +15,12 @@ def request(path, data=None):
     headers = {'Authorization': 'Bearer '+TOKEN.read_text().strip()}
     body = None if data is None else json.dumps(data).encode()
     req = urllib.request.Request(URL+path, data=body, headers=headers)
-    with urllib.request.urlopen(req, timeout=90) as response: return json.load(response)
+    try:
+        with urllib.request.urlopen(req, timeout=90) as response: return json.load(response)
+    except urllib.error.HTTPError as error:
+        try: detail=json.load(error).get('error',str(error))
+        except (ValueError,AttributeError): detail=str(error)
+        raise ValueError(detail) from None
 
 
 def main():

@@ -76,6 +76,9 @@ def main():
     if addons: archives.append(('addons.tar.gz',addons))
     for filename, selected in archives:
         if args.reuse_targets and filename=='targets.tar.gz':continue
+        if (previous and filename=='addons.tar.gz' and images==previous['images']
+                and sha(out/filename)==previous['files'].get(filename)):
+            continue
         print('Saving', filename, flush=True)
         with gzip.open(out/filename, 'wb', compresslevel=1) as dest:
             child = subprocess.Popen(docker+['save', '--platform=linux/amd64']+selected,
