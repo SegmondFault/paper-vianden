@@ -86,6 +86,12 @@ def main():
                 (runtime/name).chmod(0o755)
             shutil.copyfile(Path(temp)/'usr/share/doc/sysbox-ce/copyright', runtime/'COPYRIGHT')
         (release/'pv.py').chmod(0o755)
+    # Archives preserve the builder's numeric UID when extracted by root.
+    # Never carry that identity into a privileged deployed release.
+    for base, dirs, files in os.walk(release):
+        os.chown(base, 0, 0)
+        for name in files:
+            os.chown(Path(base)/name, 0, 0)
     library = store/'library'; library.mkdir(mode=0o755, exist_ok=True)
     for name in ['envelope.tar.gz', 'targets.tar.gz', 'manifest.json']:
         shutil.copyfile(bundle/name, library/name)
