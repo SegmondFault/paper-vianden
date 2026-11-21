@@ -17,10 +17,11 @@ def main():
     report={'success':False,'checks':{}}
     def control(command):return client.json('human','range '+command+' --token '+shlex.quote(token),timeout=240)
     def ready():
+        started=time.monotonic()
         for _ in range(150):
             state=client.json('human','range status')
             if state['phase']=='ready':return
-            if state['phase']=='stopped': raise RuntimeError('Range startup stopped; inspect the owner journal')
+            if state['phase']=='stopped' and time.monotonic()-started>15: raise RuntimeError('Range startup stopped; inspect the owner journal')
             time.sleep(3)
         raise RuntimeError('Range did not become ready')
     def py(role,source):return client.run(role,'python3 -c '+shlex.quote(source)).stdout
