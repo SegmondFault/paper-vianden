@@ -134,6 +134,8 @@ def session(args):
             if child.poll() is None:
                 subprocess.run(['/usr/bin/systemctl', 'stop', 'paper-vianden-session.service'], env=ENV)
                 child.wait(timeout=60)
+        if code == 130:
+            raise KeyboardInterrupt
         if code:
             raise subprocess.CalledProcessError(code, service)
 

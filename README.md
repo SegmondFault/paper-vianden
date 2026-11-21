@@ -41,9 +41,9 @@ service has a 7 GiB ceiling. Mutable storage has a 32 GiB filesystem limit.
 Images remain cached separately. Sysbox shares the host kernel; it is not a VM.
 
 Read the [operator guide](docs/operators.md), [architecture](docs/architecture.md)
-and [validation record](docs/validation.md). Native Sysbox validation is in
-progress. A separately tested [local prototype](docs/prototype.md) remains
-available for development.
+and [validation record](docs/validation.md). Native amd64 protocol, reset and
+cleanup checks pass. A separately tested [local prototype](docs/prototype.md)
+remains available for development.
 
 ## Licence
 

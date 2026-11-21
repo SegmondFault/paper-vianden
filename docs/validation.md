@@ -38,10 +38,35 @@ commands. It also corrected two stale upstream credential fixtures.
 
 ## Expanded runtime validation
 
-The combined AMD64 image library builds successfully. Resolved Compose has 22
-services and no published host ports. Directory seed enumeration, its UI, SNMP
-and the core protocol checks pass locally. FTP and mail encounter amd64
-emulation errors on an ARM64 development engine; native verification is pending.
-The new Sysbox lifecycle is awaiting native Linux validation.
+The complete Sysbox range passed native Linux amd64 validation:
 
-Runtime evidence, keys and deployment inventories remain outside Git.
+- All exported image configurations are amd64; the offline library starts without
+  registry access. Twenty-two service/workstation containers become ready.
+- All 21 protocol groups pass, including directory enumeration, FTP, SMTP capture,
+  IMAP/POP3 authentication, seeded SQL databases, web applications, file sharing,
+  Redis, SNMP, the badge simulator and the 32-bit teaching server.
+- Blue, participant and administrative control consoles work. The participant
+  lacks the blue key and internal DNS names. Workstations and the enclosing
+  container have no external default route; the blue workstation has no Docker
+  socket. The control socket belongs to the inner daemon.
+- Exiting a joined console leaves the owner's session active. Owner shell exit
+  destroys the session; status then reports Stopped. Repeated stop is harmless.
+- A new session removes a target file marker, restores the database from six rows
+  to its five-row seed and creates a different management key.
+- Explicit stop from another login cleans up the fully running network. A forced
+  SIGKILL of the transient unit during startup also leaves no range helpers,
+  loop devices, named session disks or session cgroup.
+- Concurrent starts are rejected. The operator has neither Docker-group access
+  nor general sudo. Pre-existing host services remain active and the original
+  Docker/containerd processes retain their start and restart state. The global
+  Docker configuration remains unchanged.
+
+Verified boundaries include a 6 GiB / 2,048-task outer container, a 7 GiB service
+ceiling with a 5 GiB cache-reclamation threshold, and a bounded 32 GiB session
+filesystem. Protocol readiness is not an attack-load benchmark. No shared-host
+reboot or power-loss recovery test was performed.
+
+The wrapper deliberately provides terminal access rather than browser forwarding.
+Hashcat needs a separately supplied compatible compute backend; the other listed
+analysis tools are installed. There is no model runtime or automatic evidence
+retention. Runtime records, access keys and deployment inventories stay outside Git.
