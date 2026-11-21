@@ -1,6 +1,6 @@
-# Quickstart: blue first, then red, then green
+# Quickstart - players
 
-Your SOC models run outside Paper Vianden and use SSH tools to work inside it.
+Your SOC models should run outside Paper Vianden and use SSH tools to work inside it.
 Replace `range.example` with the deployment host. Get credentials privately from
 the operator; passwords and instance addresses are not stored in this repository.
 The human account controls the single shared exercise. Agent logins only join it.
