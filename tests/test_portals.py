@@ -64,7 +64,9 @@ class PortalTests(unittest.TestCase):
         self.assertIn('Match User agent,observer', block)
         self.assertIn('DisableForwarding yes', block)
         self.assertIn('PermitUserRC no', block)
-        self.assertIn('MaxSessions 1', block)
+        # UID flock, not MaxSessions=1: OpenSSH channel teardown can lag exit
+        # status and spuriously reject sequential commands on a reused transport.
+        self.assertNotIn('MaxSessions 1', block)
         self.assertIn('ForceCommand /usr/local/libexec/paper-vianden-ssh', block)
         self.assertNotIn('Match all', block)
         for name in ('root\nForceCommand evil', '../root', 'a,b', 'x y'):

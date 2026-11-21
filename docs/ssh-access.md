@@ -24,7 +24,9 @@ The command is passed as one argument to `bash -lc` **inside blue**, never to a
 privileged host shell. Interactive SSH should request a PTY (`ssh -t` or the
 client library's equivalent). Noninteractive commands also work without a PTY.
 Each account permits **one active workstation session**, enforced across SSH
-connections by a UID-bound lock as well as a per-connection channel limit. A
+connections and channels by a UID-bound lock. The server does not use
+`MaxSessions=1`: OpenSSH channel teardown can lag a command's exit status and
+otherwise spuriously reject sequential commands on a reused SSH transport. A
 second concurrent login is rejected; after disconnect, the slot is released.
 Blue and white use different accounts and can connect simultaneously. Agent
 architectures must serialize SSH tool calls. An authenticated SSH transport with
