@@ -2,8 +2,9 @@
 
 ## Synthetic activity layer
 
-`python3 -m unittest discover -s tests -v` passes 31 tests, including portal UID/role binding, command argument isolation,
-scoped SSH configuration updates, read-only observation, and clock
+`python3 -m unittest discover -s tests -v` passes 31 tests, including portal
+UID/role binding, command argument isolation, scoped SSH configuration updates,
+read-only observation, and clock
 sharing/bounds, independent seeded variants, smooth office modulation, jittered
 slot bounds/ordering, cadence recovery from observed-style timestamps, accelerated
 completion without duplicate events, dependency blocking, a failed chunk
@@ -41,12 +42,43 @@ The smoke script is strict by default: use `python3 tests/smoke_simulation.py`
 on native Linux AMD64 to require all eight employee diagnostics. Its optional
 `--allow-rosetta` mode tolerates only mail/FTP failures with observed Rosetta
 errors, and reports them explicitly. LDAP bootstrap is awaited before the clock
-starts. Full rebuilt-envelope lifecycle and native FTP/IMAP validation remain
-outstanding; this rehearsal uses the actual service containers directly.
+starts. This local rehearsal uses service containers directly; the native
+rebuilt-envelope checks are recorded separately below.
 
 Rebuild the offline bundle and explicitly reinstall to deploy the new runtime,
 launcher and sudo permissions; existing installed releases do not auto-update.
 
+
+## Native deployed SSH portal rehearsal
+
+The rebuilt 26-service envelope was installed on Debian 12 Linux AMD64 and
+tested through real SSH accounts (credentials and instance addresses omitted):
+
+- First blue-account SSH login automatically started the managed range.
+- Both interactive PTY login and one-shot, non-PTY SSH commands entered the blue
+  workstation, not the VPS host. A file survived disconnect/reconnect.
+- Agent-side checks resolved targets, scanned fixed SSH/SMB ports and queried
+  the seeded LDAP directory successfully.
+- White-account SSH entered a distinct workstation as UID 65534; `observe`
+  read private story progress through read-only mounts, without a Docker socket.
+- Seed 42 at 3600x completed all 47 events with zero errors/blocked stages; white
+  observed all 32 synthetic DNS transfers. This accelerated test establishes
+  functional completion, not fidelity of the live DNS frequency signal.
+- All eight native employee protocol diagnostics passed, including FTP and mail.
+- Blue had no host release, host Docker socket or white journal mounted. SSH
+  forwarding and host-side attempts to select another role were denied.
+- Explicit managed-owner stop cleaned up. A separate fresh run then expired at
+  an actual three-minute lease (`Result=timeout`), removed active state, unmounted
+  its disposable filesystem and stopped its Sysbox helpers automatically.
+- A previous blue-only test file was absent in the fresh run. The host Docker
+  daemon's PID/start time and unrelated workload state stayed unchanged.
+- The final live preset was restored to seed 20260112, a 1x scenario clock and a
+  26-hour lease. Fresh blue access and white status confirmed that preset.
+
+No provider reboot/power-loss test was performed. Per-user concurrent ranges,
+idle timeout, lease renewal and participant reset controls are not implemented.
+
+## Earlier prototype checks
 
 The local prototype was evaluated using Docker Desktop's Linux ARM64 engine. All nine
 containers became healthy; management SSH and portal/SMB/SQL/webmail/API/admin/
