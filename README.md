@@ -9,6 +9,7 @@ describes services.
 **Start with the [Quickstart](QUICKSTART.md): blue + scripted scenario, then red LLM, then green LLM.**
 
 [Environment diagram and network membership](docs/environment.md).
+[Short team message with basic smoke-test instructions](docs/team-message.md).
 
 ## SSH access
 

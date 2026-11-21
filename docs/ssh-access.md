@@ -17,8 +17,12 @@ White is an unprivileged observer with read-only journal mounts, no administrato
 key and no target interfaces. Its narrowly parsed `range` commands control the
 lifecycle through the host portal; ordinary shell commands stay in white.
 
-A human claims a named, time-limited reservation and keeps its secret control
-token. Only that holder can start/reset/stop/release the one shared exercise.
+A human runs `range claim` to create a named, time-limited reservation. The
+command prints a reservation code in its JSON `token` field; the human keeps
+that code and supplies it with the existing `--token` option to
+start/reset/stop/release the one shared exercise. See the
+[Quickstart](../QUICKSTART.md#1-blue-team-with-the-pre-programmed-scenario) for the
+exact commands. Agent accounts do not need the reservation code.
 Agent logins never start scenarios. The reservation is independent of SSH
 sessions: 16 concurrent workstation sessions per account are allowed by default.
 A UID-bound slot limit caps connections globally; SSH MaxSessions is 16 per

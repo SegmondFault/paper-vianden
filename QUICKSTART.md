@@ -9,14 +9,35 @@ See the [environment diagram](docs/environment.md) for the networks and workstat
 
 ## 1. Blue team with the pre-programmed scenario
 
-The human reserves and starts a fresh demo:
+The human uses their normal SSH login to reserve the exercise:
 
 ```sh
 ssh vianden@range.example 'range claim Alice --minutes 120'
-# Keep the returned TOKEN private. It belongs to the human, not the model.
-ssh vianden@range.example 'range start --token TOKEN --seed 42 --clock-speed 60'
+```
+
+**That command generates your reservation code and prints it in the response.**
+The response includes a JSON field named `token`, for example (shortened):
+
+```json
+{"token": "...your generated reservation code...", "holder": "Alice"}
+```
+
+Copy the complete value of `token`, without the surrounding quotes. Replace
+`RESERVATION_CODE` below with that value. The existing command-line option is
+called `--token`; its value is the reservation code. It identifies the human who
+reserved this exercise, including when people share the human SSH account.
+Keep it with the human operator; the blue agent only needs its own SSH login.
+
+Start the exercise and check its progress:
+
+```sh
+ssh vianden@range.example 'range start --token RESERVATION_CODE --seed 42 --clock-speed 60'
 ssh vianden@range.example 'range status'
 ```
+
+Reuse the same reservation code for reset, export and release below. It remains
+valid until the reservation expires or is released. `range status` shows the
+reservation holder and expiry; it does not display the reservation code.
 
 Wait for `phase: ready`; cold startup can take several minutes. Every new start
 or reset clears live logs, findings and shell histories across all four roles
@@ -92,7 +113,7 @@ The storyline becomes idle after 24 simulated hours; a human reset starts fresh.
 The same human lease holder resets into red LLM mode:
 
 ```sh
-ssh vianden@range.example 'range reset --token TOKEN --seed 42 --clock-speed 60 --attacker llm --normal-traffic scripted'
+ssh vianden@range.example 'range reset --token RESERVATION_CODE --seed 42 --clock-speed 60 --attacker llm --normal-traffic scripted'
 # Wait for phase: ready again.
 ssh vianden-agent-red@range.example 'hostname'
 ```
@@ -113,7 +134,7 @@ Red logins are rejected when the human has selected a scripted attacker.
 To use blue, red and green models together:
 
 ```sh
-ssh vianden@range.example 'range reset --token TOKEN --seed 42 --clock-speed 60 --attacker llm --normal-traffic llm'
+ssh vianden@range.example 'range reset --token RESERVATION_CODE --seed 42 --clock-speed 60 --attacker llm --normal-traffic llm'
 # Wait for phase: ready again.
 ssh vianden-agent-green@range.example 'hostname'
 ssh vianden-agent-green@range.example 'green-work all'
@@ -144,16 +165,17 @@ To combine a scripted intruder with a green LLM instead, use
 ## Save results and finish
 
 Alerts, cases, notes and generated Markdown handovers are exported with evidence.
-A fresh start/reset clears them, their API token, IDS logs and containment rules.
+A fresh start/reset clears them, IDS logs and containment rules, and refreshes
+workspace API access automatically.
 All agent roles can save reports under their own `/var/lib/soc-ai`. Reset and
 normal teardown archive evidence and findings outside the disposable run.
 Archives also contain private instructor truth, so give them to the human owner.
 
 ```sh
-ssh vianden@range.example 'range export --token TOKEN'
+ssh vianden@range.example 'range export --token RESERVATION_CODE'
 ssh vianden@range.example 'range archives'
 ssh vianden@range.example 'range download ARCHIVE_ID' > demo.tar.gz
-ssh vianden@range.example 'range release --token TOKEN'
+ssh vianden@range.example 'range release --token RESERVATION_CODE'
 ```
 
 Release stops the exercise and frees the human reservation. A second person

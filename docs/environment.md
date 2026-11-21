@@ -13,7 +13,7 @@ flowchart TB
   greenModel["External benign green LLM · optional"]
 
   subgraph VPS["VPS · existing SSH service"]
-    gate["Human lease + private control token<br/>start · reset · export · stop"]
+    gate["Human lease + private reservation code<br/>start · reset · export · stop"]
     portals["Fixed SSH account → role mapping<br/>parallel agent sessions · one shared run"]
     archives["Durable private evidence archives<br/>blue/red/green findings + instructor truth"]
 

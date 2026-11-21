@@ -13,13 +13,19 @@ Use remote SSH commands on the human account:
 ```sh
 ssh human@range.example 'range status'
 ssh human@range.example 'range claim Alice --minutes 120'
-# Keep the returned token private.
-ssh human@range.example 'range start --token TOKEN --seed 42 --clock-speed 60'
+# Copy the returned token field: this is the human reservation code.
+ssh human@range.example 'range start --token RESERVATION_CODE --seed 42 --clock-speed 60'
 ```
+
+`range claim` generates the reservation code and returns it in the JSON `token`
+field. Copy its complete value into `RESERVATION_CODE`; the existing CLI option
+`--token` accepts that code. Keep it with the human operator. See the
+[Quickstart](../QUICKSTART.md#1-blue-team-with-the-pre-programmed-scenario) for an
+example response and the full steps.
 
 Cold startup takes several minutes; `range status` reports `phase: ready`.
 One human lease and one scenario exist at a time, even when people share the
-human Unix account. Only the token holder can start/reset/stop/release that run.
+human Unix account. Only the holder of the reservation code can start/reset/stop/release that run.
 Lease expiry uses real time and stops the owner. A login never starts a run.
 
 Agent connections only join that exercise. Up to 16 concurrent workstation
@@ -61,12 +67,12 @@ and `observe story` for instructor truth. Keep white credentials out of model co
 ## Export and finish
 
 ```sh
-ssh human@range.example 'range export --token TOKEN'
+ssh human@range.example 'range export --token RESERVATION_CODE'
 ssh human@range.example 'range archives'
 ssh human@range.example 'range download ARCHIVE_ID' > demo.tar.gz
-ssh human@range.example 'range reset --token TOKEN --seed 43 --clock-speed 60'
-ssh human@range.example 'range stop --token TOKEN'
-ssh human@range.example 'range release --token TOKEN'
+ssh human@range.example 'range reset --token RESERVATION_CODE --seed 43 --clock-speed 60'
+ssh human@range.example 'range stop --token RESERVATION_CODE'
+ssh human@range.example 'range release --token RESERVATION_CODE'
 ```
 
 Reset exports before replacing the run. Stop keeps the lease; release exports,
