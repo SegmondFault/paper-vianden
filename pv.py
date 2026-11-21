@@ -115,7 +115,8 @@ def session(args):
         if args.check:
             argv.append('--check')
         properties = ['--property=Delegate=yes', '--property=KillMode=control-group',
-                      '--property=MemoryMax=7G', '--property=MemorySwapMax=0',
+                      '--property=MemoryHigh=5G', '--property=MemoryMax=7G',
+                      '--property=MemorySwapMax=0',
                       '--property=CPUQuota=400%', '--property=TasksMax=4096',
                       '--property=TimeoutStopSec=45']
         own_group = next(line.split('::', 1)[1].strip() for line in
