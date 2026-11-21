@@ -52,7 +52,8 @@ def main():
     previous=json.loads((out/'manifest.json').read_text()) if args.reuse_targets else None
     if previous and sha(out/'targets.tar.gz')!=previous['files']['targets.tar.gz']:
         raise RuntimeError('Existing target library checksum mismatch')
-    for alias, source in ([] if args.reuse_targets else image_sources.items()):
+    for alias, source in image_sources.items():
+        if previous and previous.get('source_images',{}).get(alias)==source: continue
         run(docker+['pull', source['reference']])
         run(docker+['tag', source['reference'], alias])
     if not args.skip_build and not args.reuse_targets:
@@ -66,10 +67,14 @@ def main():
     if not args.reuse_targets:run(compose+['pull']+external)
     run(docker+['build', '--platform=linux/amd64', '-f', 'Dockerfile.envelope',
                 '-t', 'paper-vianden/envelope:local', '.'])
-    images = sorted({service['image'] for service in cfg['services'].values()})
-    if previous and (images!=previous['images'] or image_sources!=previous.get('source_images')):
-        raise RuntimeError('Target image inventory changed; rebuild instead of reusing targets')
-    for filename, selected in [('targets.tar.gz', images), ('envelope.tar.gz', ['paper-vianden/envelope:local'])]:
+    images = sorted({service['image'] for service in cfg['services'].values()} | {'paper-vianden/ids:local'})
+    base_images = previous.get('base_images',previous['images']) if previous else images
+    addons = sorted(set(images)-set(base_images))
+    if previous and (not set(base_images)<=set(images) or any(image_sources.get(k)!=v for k,v in previous.get('source_images',{}).items())):
+        raise RuntimeError('Existing base images changed; rebuild instead of reusing targets')
+    archives=[('targets.tar.gz', images), ('envelope.tar.gz', ['paper-vianden/envelope:local'])]
+    if addons: archives.append(('addons.tar.gz',addons))
+    for filename, selected in archives:
         if args.reuse_targets and filename=='targets.tar.gz':continue
         print('Saving', filename, flush=True)
         with gzip.open(out/filename, 'wb', compresslevel=1) as dest:
@@ -80,12 +85,13 @@ def main():
                 raise RuntimeError('Image export failed')
     # A containerd image store can hold multiple architectures under one tag.
     # Check the exported configs, rather than trusting host defaults or tags.
-    with tarfile.open(out/'targets.tar.gz') as archive:
-        records = json.load(archive.extractfile('manifest.json'))
-        for record in records:
-            image = json.load(archive.extractfile(record['Config']))
-            if image.get('architecture') != 'amd64':
-                raise RuntimeError('Exported a non-amd64 target image')
+    for filename in ['targets.tar.gz']+(['addons.tar.gz'] if addons else []):
+        with tarfile.open(out/filename) as archive:
+            records = json.load(archive.extractfile('manifest.json'))
+            for record in records:
+                image = json.load(archive.extractfile(record['Config']))
+                if image.get('architecture') != 'amd64':
+                    raise RuntimeError('Exported a non-amd64 target image')
     files = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).split(b'\0')
     with tarfile.open(out/'source.tar.gz', 'w:gz') as archive:
         for raw in files:
@@ -108,10 +114,10 @@ def main():
             shutil.copyfileobj(source, dest)
     if sha(fuse) != FUSE_SHA:
         raise RuntimeError('FUSE helper checksum mismatch')
-    manifest = {'architecture': 'amd64', 'services': len(cfg['services']),
+    manifest = {'architecture': 'amd64', 'services': len(cfg['services'])+1,
                 'source_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
-                'images': images, 'source_images': image_sources, 'files': {name: sha(out/name) for name in
-                    ['targets.tar.gz', 'envelope.tar.gz', 'source.tar.gz', 'sysbox.deb', 'fuse3.deb']}}
+                'images': images, 'base_images':base_images, 'source_images': image_sources, 'files': {name: sha(out/name) for name in
+                    ['targets.tar.gz', 'envelope.tar.gz', 'source.tar.gz', 'sysbox.deb', 'fuse3.deb']+(['addons.tar.gz'] if addons else [])}}
     (out/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     print('Prepared offline library under artifacts/. No range was started.')
 

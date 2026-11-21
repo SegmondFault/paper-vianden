@@ -12,7 +12,8 @@ import time
 ROOTS = {'observations':Path('/var/log/soc-evidence'),'employees':Path('/var/log/simulated-users'),
          'dns':Path('/var/log/dns'),'instructor':Path('/var/log/range-instructor'),
          'findings':Path('/var/lib/soc-ai'),'red-findings':Path('/var/lib/soc-ai-red'),
-         'green-findings':Path('/var/lib/soc-ai-green'),'green':Path('/var/log/green-users')}
+         'green-findings':Path('/var/lib/soc-ai-green'),'green':Path('/var/log/green-users'), 'ids':Path('/var/log/security'),
+         'firewall':Path('/var/log/firewall')}
 
 
 def export(stream, roots=ROOTS, budget=48*2**20):

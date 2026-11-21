@@ -1,5 +1,5 @@
 FROM docker:28-dind@sha256:9a06753d2401cd049b34cd27dbbc3e0db717d4c1db7bc7f2efad1c187e00bf5a
-RUN apk add --no-cache python3 bash openssh-client
+RUN apk add --no-cache python3 bash openssh-client iproute2
 WORKDIR /opt/paper-vianden
 COPY prototype/ ./prototype/
 COPY upstream/ethical-hacking-docker-labs/ ./upstream/ethical-hacking-docker-labs/

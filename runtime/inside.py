@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+from corporate import prepare, Firewall
 
 ROOT = Path('/opt/paper-vianden')
 COMPOSE = ['docker', 'compose', '-p', 'paper-vianden', '--profile', 'extended',
@@ -20,7 +21,7 @@ def clear_live_evidence():
         run(COMPOSE+['exec','-T','--user','0',service,'python3','-c',program])
     config=json.loads(subprocess.check_output(COMPOSE+['config','--format','json'],cwd=ROOT))
     names=('activity-journal','story-journal','dns-evidence','soc-evidence','green-journal',
-           'agent-findings','red-findings','green-findings')
+           'agent-findings','red-findings','green-findings','analyst-access','ids-evidence','firewall-evidence')
     argv=['docker','run','--rm','--network','none','--read-only','--cap-drop','ALL','--cap-add','DAC_OVERRIDE']
     for name in names:
         argv+=['--mount','type=volume,src='+config['volumes'][name]['name']+',dst=/evidence/'+name]
@@ -51,14 +52,19 @@ def main():
             raise RuntimeError('Inner Docker did not become ready')
         print('Loading offline target images...', flush=True)
         run(['docker', 'load', '-i', '/library/targets.tar.gz'], stdout=subprocess.DEVNULL)
+        if Path('/library/addons.tar.gz').exists():
+            run(['docker','load','-i','/library/addons.tar.gz'],stdout=subprocess.DEVNULL)
         # Docker's archive format does not retain repository digest references.
         # Restore a stable local alias from the pinned image's config identity.
         for alias, source in json.loads((ROOT/'runtime/image-sources.json').read_text()).items():
             run(['docker', 'tag', source['config_id'], alias])
         run(['python3', str(ROOT/'prototype/range'), 'init'])
+        assignments,overlay=prepare(COMPOSE)
+        COMPOSE.extend(['-f',str(overlay)])
         print('Starting the seeded service network...', flush=True)
         run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--wait',
-                     '--wait-timeout','180','--scale','activity=0','--scale','scenario-runner=0','--scale','telemetry=0'])
+                     '--wait-timeout','180','--scale','activity=0','--scale','scenario-runner=0','--scale','telemetry=0','--scale','ids=0'])
+        firewall=Firewall(assignments,COMPOSE)
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
                      '/opt/paper-vianden/runtime/initialise.py'])
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
@@ -74,6 +80,8 @@ def main():
         run(COMPOSE+['exec', '-T', 'file-01', 'smbcontrol', 'all', 'reload-config'])
         print('Clearing live terminal evidence and startup probe logs...',flush=True)
         clear_live_evidence()
+        run(COMPOSE+['up','-d','--no-build','--pull','never','--no-deps','--scale','ids=1',
+                     '--wait','--wait-timeout','120','ids'])
         run(COMPOSE+['up','-d','--no-build','--pull','never','--no-deps','--scale','telemetry=1',
                      '--wait','--wait-timeout','120','telemetry'])
         print('Starting simulated users and the intrusion storyline...', flush=True)
@@ -85,7 +93,7 @@ def main():
         run(COMPOSE+['exec', '-T', 'scenario-runner', 'python3',
                      '/opt/paper-vianden/runtime/scenario_runner.py', '--check'])
         Path('/tmp/paper-vianden-ready').write_text('ready\n')
-        print(json.dumps({'event':'ready','services':28}),flush=True)
+        print(json.dumps({'event':'ready','services':29}),flush=True)
         while daemon.poll() is None:
             time.sleep(1)
         raise RuntimeError('Inner Docker stopped unexpectedly')

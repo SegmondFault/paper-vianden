@@ -10,7 +10,7 @@ import stat
 import uuid
 
 VOLUMES=('activity-journal','story-journal','dns-evidence','soc-evidence','green-journal',
-         'agent-findings','red-findings','green-findings')
+         'agent-findings','red-findings','green-findings','analyst-access','ids-evidence','firewall-evidence')
 LOGS=('/var/log/auth.log','/var/log/nginx/*.log','/var/log/samba/*.log',
       '/var/log/api.log','/var/log/vsftpd.log','/var/log/mail.log','/var/log/health.log')
 HISTORY=('.bash_history','.zsh_history','.python_history','.mysql_history','.lesshst')

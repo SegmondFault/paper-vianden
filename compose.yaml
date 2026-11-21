@@ -55,6 +55,8 @@ services:
       - activity-journal:/var/log/simulated-users:ro
       - dns-evidence:/var/log/dns:ro
       - ../runtime/evidence.py:/usr/local/bin/evidence:ro
+      - ../runtime/analyst.py:/usr/local/bin/analyst:ro
+      - analyst-access:/run/analyst:ro
       - soc-evidence:/var/log/soc-evidence:ro
       - agent-findings:/var/lib/soc-ai
 
@@ -85,6 +87,8 @@ services:
       - red-findings:/var/lib/soc-ai-red:ro
       - green-findings:/var/lib/soc-ai-green:ro
       - green-journal:/var/log/green-users:ro
+      - ids-evidence:/var/log/security:ro
+      - firewall-evidence:/var/log/firewall:ro
     # No target networks, administrator keys or Docker socket.
     networks: [management]
     healthcheck:
@@ -108,10 +112,14 @@ services:
     volumes:
       - ./state/blue:/root/.ssh/id_ed25519:ro
       - ../runtime/evidence.py:/usr/local/bin/evidence:ro
+      - ../runtime/analyst_workspace.py:/usr/local/bin/analyst_workspace.py:ro
+      - analyst-access:/run/analyst
       - activity-journal:/var/log/simulated-users:ro
       - dns-evidence:/var/log/dns:ro
       - soc-evidence:/var/log/soc-evidence
       - green-journal:/var/log/green-users:ro
+      - ids-evidence:/var/log/security:ro
+      - firewall-evidence:/var/log/firewall:ro
     networks:
       management: {aliases: [telemetry.management]}
       dmz: {}
@@ -392,9 +400,19 @@ volumes:
     driver_opts:
       type: tmpfs
       device: tmpfs
-      o: size=16m,mode=0755,nosuid,nodev,noexec
+      o: size=32m,mode=0755,nosuid,nodev,noexec
   agent-findings:
     driver: local
   red-findings:
     driver: local
   green-findings: *journal
+
+  analyst-access:
+    driver: local
+  ids-evidence:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=24m,mode=0755,nosuid,nodev,noexec
+  firewall-evidence: *journal

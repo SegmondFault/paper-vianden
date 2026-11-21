@@ -38,3 +38,4 @@ notes/
 *.qcow2
 *.pem
 *.key
+prototype/corporate.generated.yaml

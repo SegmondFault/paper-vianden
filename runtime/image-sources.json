@@ -2,5 +2,9 @@
   "paper-vianden/dvwa:local": {
     "reference": "ghcr.io/digininja/dvwa@sha256:c7e272f2b6b617bd4446ee5439f525f8ba562c46ac9b1787609b45b68591d0f8",
     "config_id": "sha256:56a645c89d3ac713486bddc2b4e83fb08a2611b6a5368deb5319eb7f7faaf27f"
+  },
+  "paper-vianden/ids:local": {
+    "reference": "jasonish/suricata@sha256:d5a3a1785299ab40918d465e54fedf8e3afeeedba76bb64dbc20bda2c3",
+    "config_id": "sha256:c297ff467e7681dd594a0cde2b076e7fc5adfcb4381c6ba7ffc85600d7ca22a4"
   }
 }

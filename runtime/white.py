@@ -35,7 +35,7 @@ def tail(path, count):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('view',nargs='?',choices=('status','story','activity','dns','markers','green','snapshot'),default='status')
+    parser.add_argument('view',nargs='?',choices=('status','story','activity','dns','markers','green','snapshot','analyst'),default='status')
     parser.add_argument('--tail', type=int, default=20)
     parser.add_argument('--watch', action='store_true', help='Refresh every two seconds; Ctrl-C to leave')
     parser.add_argument('--check', action='store_true')
@@ -50,6 +50,8 @@ def main():
     while True:
         if args.view == 'status':
             print(json.dumps(status(), indent=2), flush=True)
+        elif args.view == 'analyst':
+            print(json.dumps(load(Path('/var/log/soc-evidence/analyst/workspace.json')),indent=2),flush=True)
         elif args.view == 'snapshot':
             print(json.dumps({'status': status(), 'journals': {
                 name: [json.loads(line) for line in tail(path, args.tail) if line.strip()]

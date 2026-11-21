@@ -96,6 +96,7 @@ def main():
         (release/'runtime/white.py').chmod(0o755)
         (release/'runtime/evidence.py').chmod(0o755)
         (release/'runtime/green.py').chmod(0o755)
+        (release/'runtime/analyst.py').chmod(0o755)
     # Archives preserve the builder's numeric UID when extracted by root.
     # Never carry that identity into a privileged deployed release.
     for base, dirs, files in os.walk(release):
@@ -105,7 +106,7 @@ def main():
     # Workstation portals must not expose host-side storyline source.
     release.chmod(0o700)
     library = store/'library'; library.mkdir(mode=0o755, exist_ok=True)
-    for name in ['envelope.tar.gz', 'targets.tar.gz', 'manifest.json']:
+    for name in ['envelope.tar.gz', 'targets.tar.gz', 'manifest.json']+(['addons.tar.gz'] if 'addons.tar.gz' in manifest['files'] else []):
         shutil.copyfile(bundle/name, library/name)
         (library/name).chmod(0o644)
     current = prefix/'current'; pending = prefix/'next'

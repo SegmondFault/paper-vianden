@@ -36,3 +36,12 @@ The pinned Debian fuse3 package supplies fusermount3 for private runtime use.
 Its complete copyright/licence notice is preserved beside the extracted helper.
 The helper is GPL-2.0-or-later; corresponding source is available at
 https://sources.debian.org/src/fuse3/3.14.0-4/. No changes are made to it.
+
+## Suricata IDS
+
+The offline library includes the unmodified Suricata 8.0.8 image from
+[jasonish/docker-suricata](https://github.com/jasonish/docker-suricata), pinned by
+digest in `runtime/image-sources.json`. Suricata is GPL-2.0; retain the image's
+notices. Corresponding upstream source is available from the
+[OISF 8.0.8 release](https://github.com/OISF/suricata/releases/tag/suricata-8.0.8)
+and the image build repository. Original lab rules and wrappers are in `runtime/`.

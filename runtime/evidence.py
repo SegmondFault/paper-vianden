@@ -8,10 +8,12 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import logging
+import hmac
 from logging.handlers import RotatingFileHandler
 import os
 from pathlib import Path
 import shlex
+import secrets
 import subprocess
 import threading
 import time
@@ -31,7 +33,9 @@ SOURCES = {
 }
 LOCAL = {'dns': Path('/var/log/dns/queries.jsonl'),
          'employees':Path('/var/log/simulated-users/activity.jsonl'),
-         'green':Path('/var/log/green-users/activity.jsonl')}
+         'green':Path('/var/log/green-users/activity.jsonl'),
+         'ids':Path('/var/log/security/eve.json'),
+         'firewall':Path('/var/log/firewall/actions.jsonl')}
 
 # Fixed file roots, bounded reads, no pipes/device files/symlink traversal.
 READ_FILES = '''import glob,json,os,stat
@@ -68,8 +72,15 @@ def cli(argv, **kwargs):
 
 
 class Feed:
-    def __init__(self, directory=DIRECTORY):
+    def __init__(self, directory=DIRECTORY, workspace_directory=None):
+        from analyst_workspace import Workspace
         self.directory = Path(directory); self.directory.mkdir(parents=True, exist_ok=True)
+        self.workspace = Workspace(workspace_directory or self.directory/'analyst')
+        self.token = ''
+        token_root = Path('/run/analyst')
+        if token_root.is_dir():
+            self.token = secrets.token_hex(32)
+            (token_root/'token').write_text(self.token+'\n'); (token_root/'token').chmod(0o600)
         self.epoch = uuid.uuid4().hex
         self.sequence = 0
         self.events = deque(maxlen=5000)
@@ -92,10 +103,30 @@ class Feed:
                      'message': str(message)[:8192]}
             if isinstance(original, dict):
                 event['fields'] = original if len(json.dumps(original))<=8192 else {'truncated':True}
-                event['timestamp'] = original.get('time', original.get('event_time'))
+                event['timestamp'] = original.get('time', original.get('event_time',original.get('timestamp')))
             self.events.append(event)
             self.logger.info(json.dumps(event, ensure_ascii=True))
+            self.workspace.observe(event)
             return event
+
+    def search(self, query):
+        limit = int(query.get('limit', ['100'])[0])
+        if not 1 <= limit <= 1000: raise ValueError('limit must be 1..1000')
+        filters = {key: query.get(key, [''])[0] for key in ('query','host','source','since','until')}
+        for key in ('since','until'):
+            if filters[key]:
+                parsed=datetime.fromisoformat(filters[key].replace('Z','+00:00'))
+                if parsed.tzinfo is None: raise ValueError('Use an ISO UTC offset for time filters')
+                filters[key]=parsed
+        with self.lock:
+            rows = [event for event in self.events
+                if (not filters['query'] or filters['query'].lower() in event['message'].lower())
+                and (not filters['host'] or filters['host']==event['host'])
+                and (not filters['source'] or filters['source'] in event['source'])
+                and (not filters['since'] or datetime.fromisoformat(event['observed_at'])>=filters['since'])
+                and (not filters['until'] or datetime.fromisoformat(event['observed_at'])<=filters['until'])]
+            return {'events':rows[-limit:], 'matches':len(rows), 'retained':len(self.events),
+                    'scope':'bounded live feed; saved case evidence is retained separately'}
 
     def page(self, after='', limit=200):
         if not 1 <= limit <= 1000:
@@ -208,20 +239,47 @@ def availability(only=None):
 def handler(feed):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args): pass
+        def authorized(self):
+            if feed.token and not hmac.compare_digest(self.headers.get('Authorization',''), 'Bearer '+feed.token):
+                self.send_error(403); return False
+            return True
         def do_GET(self):
             try:
                 url=urllib.parse.urlsplit(self.path); query=urllib.parse.parse_qs(url.query)
+                if not (url.path=='/status' and self.client_address[0]=='127.0.0.1') and not self.authorized(): return
                 if url.path=='/events': data=feed.page(query.get('after',[''])[0],int(query.get('limit',['200'])[0]))
                 elif url.path=='/status': data=feed.status()
                 elif url.path=='/availability': data=availability()
+                elif url.path=='/analyst/logs': data=feed.search(query)
+                elif url.path=='/analyst/assets': data=json.loads(Path('/run/corporate/assets.json').read_text())
+                elif url.path in ('/analyst/inbox','/analyst/cases','/analyst/case','/analyst/audit'):
+                    data=feed.workspace.read(url.path.rsplit('/',1)[-1],query.get('id',[''])[0])
                 else: self.send_error(404); return
                 self.reply(data)
             except (ValueError, IndexError): self.send_error(400)
         def do_POST(self):
-            if self.path!='/flush': self.send_error(404); return
-            self.reply(feed.collect())
-        def reply(self,data):
-            body=json.dumps(data).encode(); self.send_response(200)
+            if not self.authorized(): return
+            try:
+                if self.path=='/flush': self.reply(feed.collect()); return
+                if not self.path.startswith('/analyst/'): self.send_error(404); return
+                size=int(self.headers.get('Content-Length','0'))
+                if not 1<=size<=20000: raise ValueError('Request body too large or missing')
+                data=json.loads(self.rfile.read(size)); action=self.path.rsplit('/',1)[-1]
+                if action=='firewall':
+                    config=json.loads(Path('/run/corporate/control.json').read_text())
+                    req=urllib.request.Request(config['url'], data=json.dumps(data).encode(),
+                        headers={'Authorization':'Bearer '+config['token']})
+                    with urllib.request.urlopen(req,timeout=10) as response: result=json.load(response)
+                    with feed.workspace.lock:
+                        feed.workspace.audit('firewall',result); feed.workspace.save()
+                else:
+                    # Always acquire feed before workspace to keep lock order consistent.
+                    with feed.lock: result=feed.workspace.mutate(action,data,list(feed.events))
+                self.reply(result)
+            except (ValueError, TypeError, KeyError, urllib.error.HTTPError) as error:
+                self.reply({'error':str(error)},400)
+        def reply(self,data,code=200):
+            body=json.dumps(data).encode(); self.send_response(code)
             self.send_header('Content-Type','application/json'); self.send_header('Content-Length',str(len(body))); self.end_headers()
             self.wfile.write(body)
     return Handler
@@ -241,7 +299,9 @@ def main():
         cursor=args.after
         while True:
             path='/events?'+urllib.parse.urlencode({'after':cursor,'limit':args.limit}) if args.command=='tail' else '/'+args.command
-            request=urllib.request.Request(URL+path,method='POST' if args.command=='flush' else 'GET')
+            headers={}
+            if Path('/run/analyst/token').is_file(): headers['Authorization']='Bearer '+Path('/run/analyst/token').read_text().strip()
+            request=urllib.request.Request(URL+path,headers=headers,method='POST' if args.command=='flush' else 'GET')
             with urllib.request.urlopen(request,timeout=90) as response: data=json.load(response)
             print(json.dumps(data),flush=True)
             if not args.follow: break

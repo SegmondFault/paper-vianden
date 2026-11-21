@@ -370,7 +370,7 @@ def session(args):
 def run_session(args):
     library = STORE/'library'
     manifest = json.loads((library/'manifest.json').read_text())
-    for name in ['envelope.tar.gz', 'targets.tar.gz']:
+    for name in ['envelope.tar.gz', 'targets.tar.gz']+(['addons.tar.gz'] if 'addons.tar.gz' in manifest['files'] else []):
         if sha256(library/name) != manifest['files'][name]:
             raise RuntimeError('Image library checksum mismatch: '+name)
     for name in ['sysbox-mgr', 'sysbox-fs']:
@@ -470,7 +470,8 @@ def run_session(args):
                         '--env','PV_ATTACKER_MODE='+args.attacker,
                         '--env','PV_NORMAL_TRAFFIC='+args.normal_traffic,
                         '--mount', 'type=bind,src='+str(library/'targets.tar.gz')+',dst=/library/targets.tar.gz,readonly',
-                        'paper-vianden/envelope:local'], stdout=subprocess.DEVNULL)
+                        ]+(['--mount','type=bind,src='+str(library/'addons.tar.gz')+',dst=/library/addons.tar.gz,readonly'] if 'addons.tar.gz' in manifest['files'] else [])+
+                       ['paper-vianden/envelope:local'], stdout=subprocess.DEVNULL)
         container_created = True
         command(DOCKER+['start', name], stdout=subprocess.DEVNULL)
         follower = subprocess.Popen(DOCKER+['logs', '--follow', name], env=ENV,
