@@ -2,7 +2,7 @@
 
 An on-demand, disposable network for attack and defence testing.
 
-One Sysbox system container runs 26 service and workstation containers across
+One Sysbox system container runs 27 service and workstation containers across
 management, DMZ and internal networks. Python owns the lifecycle; Docker Compose
 describes services. 
 
@@ -10,9 +10,10 @@ describes services.
 
 Configured agent accounts land directly in the **blue workstation**; separate
 human accounts land in the read-only **white workstation**. Both interactive
-SSH and command-per-connection agents are supported. The first login starts a
-managed, time-limited run; reconnecting does not destroy it. No LLM is hosted by
-the range. See [SSH access and operating instructions](docs/ssh-access.md).
+SSH and command-per-connection agents are supported, including parallel tools.
+A human claims a demo lease and explicitly starts its managed run; reconnecting
+does not destroy it. No LLM is hosted by the range. See
+[SSH access](docs/ssh-access.md) and the [SOC demo guide](docs/demo.md).
 
 ## Legacy foreground operator access
 
@@ -48,7 +49,7 @@ Also see [services](docs/services.md) and the [user guide](docs/users.md).
 
 An administrator prepares an offline library and installs a root-owned release
 with a restricted operator account. Nothing starts at boot or installation;
-explicitly configured SSH portals start a managed run on first login.
+the human portal starts a managed run only after its lease holder requests it.
 Each invocation uses its own Docker daemon, socket and disposable filesystem;
 it does not reconfigure or restart the host Docker daemon. Targets have no
 host-published ports or external route.

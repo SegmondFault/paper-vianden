@@ -66,7 +66,7 @@ needed evidence explicitly before stopping.
 
 ## Current access/lifecycle limits
 
-[Role-bound SSH portals](ssh-access.md) add automatic startup, a connection-
+[Role-bound SSH portals](ssh-access.md) add a human exercise gate, a connection-
 independent managed owner with a fixed lease, direct blue access and a read-only
 white workstation. They require explicit administrator configuration after
 release installation. No per-user runs, idle expiry or lease renewal is provided;
@@ -93,7 +93,7 @@ git submodule update --init --recursive
 Review the revision, rebuild its bundle, stop an active range and rerun the
 installer explicitly. A pull changes source only; it neither installs nor starts
 the range. Invocations never pull Git or images. No cron or boot hook starts
-the range; only an explicitly configured workstation portal can start on SSH login. Avoid global Docker prune or shared-daemon reconfiguration.
+the range; the human lease holder explicitly starts the managed owner. Avoid global Docker prune or shared-daemon reconfiguration.
 
 ## Recovery
 

@@ -12,6 +12,8 @@ import platform
 import pty
 import pwd
 import select
+import shlex
+import re
 import termios
 import shutil
 import signal
@@ -21,6 +23,8 @@ import time
 import uuid
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT/'runtime'))
+from demo_control import Controller, session_slot
 RUNTIME = Path('/run/paper-vianden')
 STORE = Path('/var/lib/paper-vianden')
 MOUNT = RUNTIME/'session'
@@ -112,15 +116,85 @@ def portal_role(config, uid, username):
     return record['role']
 
 
-@contextlib.contextmanager
-def portal_login_lock(uid):
-    RUNTIME.mkdir(mode=0o700, exist_ok=True)
-    with (RUNTIME/('portal-login-'+str(uid)+'.lock')).open('a') as lock:
+def managed_running():
+    return unit_loaded() or capture(['/usr/bin/systemctl','show','--property=ActiveState','--value',OWNER_UNIT]) in (
+        'active','activating','deactivating')
+
+
+def archive_directory():
+    directory = STORE/'evidence'
+    directory.mkdir(mode=0o700, exist_ok=True)
+    info = directory.lstat()
+    if directory.is_symlink() or info.st_uid != 0 or info.st_mode & 0o077:
+        raise RuntimeError('Unsafe evidence archive directory')
+    return directory
+
+
+def archive_list():
+    return {'archives': [{'id':p.stem.removesuffix('.tar'), 'bytes':p.stat().st_size,
+                          'created':p.stat().st_mtime} for p in sorted(archive_directory().glob('*.tar.gz'))[-100:]]}
+
+
+def archive_download(identity):
+    if not re.fullmatch(r'paper-vianden-[a-f0-9]{12}-[a-f0-9]{8}',identity):
+        raise RuntimeError('Invalid archive identifier')
+    path=archive_directory()/(identity+'.tar.gz')
+    if path.is_symlink() or not path.is_file() or path.stat().st_size>64*2**20:
+        raise RuntimeError('Archive unavailable or too large')
+    return path.read_bytes()
+
+
+def archive_session(info):
+    name=info['name']
+    if not re.fullmatch(r'paper-vianden-[a-f0-9]{12}',name): raise RuntimeError('Invalid session identity')
+    # Flush the collector before taking the white snapshot. Earlier releases
+    # have no collector; their original journals can still be exported.
+    subprocess.run(DOCKER+['exec',name]+INNER+['exec','-T','telemetry','python3',
+                   '/usr/local/bin/evidence','flush'],env=ENV,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=40)
+    identity=name+'-'+uuid.uuid4().hex[:8]
+    path=archive_directory()/(identity+'.tar.gz')
+    # The fixed exporter reads root-owned agent findings even with umask 077.
+    # Ordinary human white sessions remain UID 65534 and read-only.
+    argv=DOCKER+['exec',name]+INNER+['exec','-T','--user','0','white','python3','-c',(ROOT/'runtime/export_evidence.py').read_text()]
+    with path.open('xb') as target:
+        path.chmod(0o600)
+        process=subprocess.Popen(argv,env=ENV,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+        count=0
         try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise RuntimeError('This account already has a workstation session; disconnect it before connecting again.')
-        yield
+            while True:
+                data=process.stdout.read(65536)
+                if not data: break
+                count+=len(data)
+                if count>64*2**20: raise RuntimeError('Evidence archive exceeded its bound')
+                target.write(data)
+            if process.wait(timeout=30) or count<32: raise RuntimeError('Evidence export failed')
+        except BaseException:
+            process.kill(); process.wait(); path.unlink(missing_ok=True); raise
+    (RUNTIME/'last-export.json').write_text(json.dumps({'id':identity,'bytes':count,'source':info.get('source')}))
+    return {'id':identity,'bytes':count}
+
+
+def archive_current():
+    active=RUNTIME/'active.json'
+    if not active.exists(): return {'state':'stopped','archives':archive_list()['archives']}
+    info=json.loads(active.read_text())
+    if info.get('state')!='ready': return {'state':info.get('state','starting')}
+    return archive_session(info)
+
+
+def human_control(words,uid,username,config):
+    def stop():
+        command(['/usr/bin/systemctl','stop',OWNER_UNIT])
+        if unit_loaded(): command(['/usr/bin/systemctl','stop','paper-vianden-session.service'])
+    controller=Controller(RUNTIME,managed_running,
+        lambda:command(['/usr/bin/systemctl','start','--no-block',OWNER_UNIT]), stop,
+        archive_current,archive_list,archive_download,maximum=config.get('lease_minutes',1560))
+    result=controller.execute(words,uid,username)
+    if words and words[0]=='status' and isinstance(result,dict):
+        active=RUNTIME/'active.json'
+        result['phase']=json.loads(active.read_text()).get('state') if active.exists() else 'stopped'
+    if isinstance(result,bytes): sys.stdout.buffer.write(result)
+    else: print(json.dumps(result),flush=True)
 
 
 def portal(execute=None):
@@ -132,19 +206,25 @@ def portal(execute=None):
     uid = int(os.environ.get('SUDO_UID', '-1'))
     if uid <= 0:
         raise RuntimeError('Portal requires an authenticated sudo caller')
-    role = portal_role(json.loads(PORTAL_CONFIG.read_text()), uid, pwd.getpwuid(uid).pw_name)
-    with portal_login_lock(uid):
+    config=json.loads(PORTAL_CONFIG.read_text())
+    username=pwd.getpwuid(uid).pw_name
+    role = portal_role(config, uid, username)
+    words=shlex.split(execute or '')
+    if words and words[0]=='range':
+        if role!='white': raise RuntimeError('Exercise controls belong to the human account')
+        human_control(words[1:],uid,username,config)
+        return
+    with session_slot(RUNTIME,uid,config.get('max_sessions',16)):
         portal_connect(role, execute)
 
 
 def portal_connect(role, execute=None):
     RUNTIME.mkdir(mode=0o700, exist_ok=True)
-    with (RUNTIME/'portal-start.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
-        active = RUNTIME/'active.json'
-        ready = active.exists() and json.loads(active.read_text()).get('state') == 'ready'
-        if not ready:
-            command(['/usr/bin/systemctl', 'start', '--no-block', OWNER_UNIT])
+    lease=RUNTIME/'demo-lease.json'
+    if not lease.exists() or json.loads(lease.read_text()).get('expires',0)<=time.time():
+        raise RuntimeError('No human-owned demo is available. Ask the human to use range claim and range start.')
+    if not managed_running():
+        raise RuntimeError('The demo is reserved but stopped. Its human owner must use range start.')
     for attempt in range(900):
         active = RUNTIME/'active.json'
         if active.exists() and json.loads(active.read_text()).get('state') == 'ready':
@@ -162,6 +242,11 @@ def portal_connect(role, execute=None):
 def serve(args):
     """Keep a private owner terminal alive independently of participant SSH."""
     trusted_install()
+    preset=RUNTIME/'demo-run.json'
+    if preset.exists():
+        data=json.loads(preset.read_text())
+        args.seed=scenario_seed(str(data['seed']))
+        args.clock_speed=scenario_speed(str(data['clock_speed']))
     master, slave = pty.openpty()
     process = None
     def terminal():
@@ -174,6 +259,10 @@ def serve(args):
         os.close(slave)
         slave = None
         while process.poll() is None:
+            lease=RUNTIME/'demo-lease.json'
+            if preset.exists() and (not lease.exists() or json.loads(lease.read_text()).get('expires',0)<=time.time()):
+                print('Human demo lease expired; exporting evidence and stopping.',flush=True)
+                break
             readable, _, _ = select.select([master], [], [], 1)
             if readable:
                 try:
@@ -184,7 +273,9 @@ def serve(args):
                     break
                 sys.stdout.buffer.write(data)
                 sys.stdout.buffer.flush()
-        code = process.wait(timeout=30)
+        if process.poll() is None:
+            subprocess.run(['/usr/bin/systemctl','stop','paper-vianden-session.service'],env=ENV)
+        code = process.wait(timeout=100)
         if code:
             raise RuntimeError('Managed workstation owner exited with status '+str(code))
     finally:
@@ -244,7 +335,7 @@ def session(args):
                       '--property=MemoryHigh=5G', '--property=MemoryMax=7G',
                       '--property=MemorySwapMax=0',
                       '--property=CPUQuota=400%', '--property=TasksMax=4096',
-                      '--property=TimeoutStopSec=45']
+                      '--property=TimeoutStopSec=120']
         own_group = next(line.split('::', 1)[1].strip() for line in
                          Path('/proc/self/cgroup').read_text().splitlines() if line.startswith('0::'))
         unit = own_group.rsplit('/', 1)[-1]
@@ -404,6 +495,12 @@ def run_session(args):
             signal.signal(sig, signal.SIG_IGN)
         session_info['state'] = 'stopping'
         save_session(session_info)
+        if container_created:
+            try:
+                result=archive_session(session_info)
+                print('Evidence preserved: '+result['id'],flush=True)
+            except Exception as error:
+                print('EVIDENCE EXPORT FAILED: '+str(error),file=sys.stderr,flush=True)
         cleanup_ok = True
         if container_created or (SOCKET.exists() and subprocess.run(
                 DOCKER+['inspect', name], env=ENV, stdout=subprocess.DEVNULL,

@@ -43,6 +43,9 @@ def main():
                      '/opt/paper-vianden/runtime/initialise.py'])
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
                      '/opt/paper-vianden/runtime/check.py'])
+        # Preserve web stdout logs as readable files for the central sensor.
+        run(COMPOSE+['exec','-T','web-01','sh','-c',
+                     "rm -f /var/log/nginx/access.log /var/log/nginx/error.log; touch /var/log/nginx/access.log /var/log/nginx/error.log; nginx -s reopen"])
         # Keep the target config editable by defenders; enable real SMB auth logs.
         configure_samba = ("from pathlib import Path; p=Path('/etc/samba/smb.conf'); "
                            "p.write_text(p.read_text().replace('[global]', "
@@ -58,7 +61,7 @@ def main():
         run(COMPOSE+['exec', '-T', 'scenario-runner', 'python3',
                      '/opt/paper-vianden/runtime/scenario_runner.py', '--check'])
         Path('/tmp/paper-vianden-ready').write_text('ready\n')
-        print(json.dumps({'event': 'ready', 'services': 26}), flush=True)
+        print(json.dumps({'event': 'ready', 'services': 27}), flush=True)
         while daemon.poll() is None:
             time.sleep(1)
         raise RuntimeError('Inner Docker stopped unexpectedly')

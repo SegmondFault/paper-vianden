@@ -1,6 +1,6 @@
 # Service capabilities
 
-The combined configuration has 22 containers. Runtime verification is recorded
+The combined configuration has 27 containers. Runtime verification is recorded
 separately in the [validation record](validation.md).
 
 | Area | Services / tools |
@@ -31,3 +31,5 @@ application. The disposable runtime adds lightweight synthetic users and an
 inert, clock-scaled DNS-transfer storyline; see [scenario](users.md#simulated-users-and-storyline).
 No scoring engine or central traffic mirror is included.
 See [endpoints](users.md#find-the-services).
+
+Central evidence collection and durable demo exports are described in the [demo guide](demo.md).

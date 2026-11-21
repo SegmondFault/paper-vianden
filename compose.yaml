@@ -33,6 +33,7 @@ services:
   app-01:
     platform: linux/amd64
     image: paper-vianden/app-01:local
+    command: [bash, -o, pipefail, -c, "node server.js 2>&1 | tee -a /var/log/api.log"]
   admin-01:
     platform: linux/amd64
     image: paper-vianden/admin-01:local
@@ -53,6 +54,9 @@ services:
       - ../runtime/initialise.py:/opt/paper-vianden/runtime/initialise.py:ro
       - activity-journal:/var/log/simulated-users:ro
       - dns-evidence:/var/log/dns:ro
+      - ../runtime/evidence.py:/usr/local/bin/evidence:ro
+      - soc-evidence:/var/log/soc-evidence:ro
+      - agent-findings:/var/lib/soc-ai
 
   white:
     <<: *lab
@@ -73,6 +77,8 @@ services:
       - activity-journal:/var/log/simulated-users:ro
       - story-journal:/var/log/range-instructor:ro
       - dns-evidence:/var/log/dns:ro
+      - soc-evidence:/var/log/soc-evidence:ro
+      - agent-findings:/var/lib/soc-ai:ro
     # No target networks, administrator keys or Docker socket.
     networks: [management]
     healthcheck:
@@ -80,6 +86,35 @@ services:
       interval: 5s
       timeout: 3s
       retries: 18
+
+  telemetry:
+    <<: *lab
+    image: paper-vianden/toolbox:local
+    hostname: telemetry
+    entrypoint: [python3, -u, /usr/local/bin/evidence, serve]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    memswap_limit: 192m
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=16m
+    volumes:
+      - ./state/blue:/root/.ssh/id_ed25519:ro
+      - ../runtime/evidence.py:/usr/local/bin/evidence:ro
+      - activity-journal:/var/log/simulated-users:ro
+      - dns-evidence:/var/log/dns:ro
+      - soc-evidence:/var/log/soc-evidence
+    networks:
+      management: {aliases: [telemetry.management]}
+      dmz: {}
+      internal: {}
+    healthcheck:
+      test: [CMD, python3, -c, "import json,time,urllib.request; s=json.load(urllib.request.urlopen('http://127.0.0.1:8088/status',timeout=3)); assert time.time()-s['last_poll']<60"]
+      interval: 5s
+      timeout: 4s
+      retries: 24
+      start_period: 30s
 
   activity:
     <<: *lab
@@ -234,6 +269,7 @@ services:
   mail:
     <<: *lab
     image: paper-vianden/mail:local
+    command: [bash, -o, pipefail, -c, "dovecot -F 2>&1 | tee -a /var/log/mail.log"]
     build: {context: .., dockerfile: Dockerfile.labs, target: mail}
     volumes:
       - ./state/blue.pub:/run/blue-team.pub:ro
@@ -318,3 +354,11 @@ volumes:
       o: size=8m,uid=65534,gid=65534,mode=0755,nosuid,nodev,noexec
   story-journal: *journal
   dns-evidence: *journal
+  soc-evidence:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=16m,mode=0755,nosuid,nodev,noexec
+  agent-findings:
+    driver: local

@@ -30,6 +30,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--context', default='default')
     parser.add_argument('--skip-build', action='store_true')
+    parser.add_argument('--reuse-targets',action='store_true',help='Verify and reuse the existing target archive for source-only updates')
     args = parser.parse_args()
     subprocess.run(['python3', str(ROOT/'tools/check_public_tree.py')], check=True)
     if subprocess.check_output(['git', 'status', '--porcelain'], cwd=ROOT):
@@ -48,10 +49,13 @@ def main():
     def run(argv, **kw):
         return subprocess.run(argv, cwd=ROOT, env=env, check=True, **kw)
     image_sources = json.loads((ROOT/'runtime/image-sources.json').read_text())
-    for alias, source in image_sources.items():
+    previous=json.loads((out/'manifest.json').read_text()) if args.reuse_targets else None
+    if previous and sha(out/'targets.tar.gz')!=previous['files']['targets.tar.gz']:
+        raise RuntimeError('Existing target library checksum mismatch')
+    for alias, source in ([] if args.reuse_targets else image_sources.items()):
         run(docker+['pull', source['reference']])
         run(docker+['tag', source['reference'], alias])
-    if not args.skip_build:
+    if not args.skip_build and not args.reuse_targets:
         for target, tag in [('target-base', 'target-base'), ('workstation', 'workstation-base')]:
             run(docker+['build', '--platform=linux/amd64', '--target', target,
                         '-t', 'paper-vianden/'+tag+':local', 'prototype'])
@@ -59,11 +63,14 @@ def main():
     cfg = json.loads(run(compose+['config', '--format', 'json'], capture_output=True, text=True).stdout)
     external = [name for name, service in cfg['services'].items()
                 if not service['image'].startswith('paper-vianden/')]
-    run(compose+['pull']+external)
+    if not args.reuse_targets:run(compose+['pull']+external)
     run(docker+['build', '--platform=linux/amd64', '-f', 'Dockerfile.envelope',
                 '-t', 'paper-vianden/envelope:local', '.'])
     images = sorted({service['image'] for service in cfg['services'].values()})
+    if previous and (images!=previous['images'] or image_sources!=previous.get('source_images')):
+        raise RuntimeError('Target image inventory changed; rebuild instead of reusing targets')
     for filename, selected in [('targets.tar.gz', images), ('envelope.tar.gz', ['paper-vianden/envelope:local'])]:
+        if args.reuse_targets and filename=='targets.tar.gz':continue
         print('Saving', filename, flush=True)
         with gzip.open(out/filename, 'wb', compresslevel=1) as dest:
             child = subprocess.Popen(docker+['save', '--platform=linux/amd64']+selected,

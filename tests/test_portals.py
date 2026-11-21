@@ -27,20 +27,18 @@ class PortalTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             pv.portal_role(config, 1200, 'agent')
 
-    def test_one_workstation_session_per_uid_and_release_on_disconnect(self):
+    def test_parallel_tools_are_bounded_and_release_on_disconnect(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(pv, 'RUNTIME', Path(tmp)):
-            with pv.portal_login_lock(1200):
-                with self.assertRaisesRegex(RuntimeError, 'already has a workstation session'):
-                    with pv.portal_login_lock(1200):
-                        self.fail('Duplicate login was allowed')
-                with pv.portal_login_lock(1201):
-                    pass  # A white account can observe while blue is connected.
-            with pv.portal_login_lock(1200):
-                pass  # Reconnect after the previous session ended.
+            with pv.session_slot(Path(tmp),1200,2):
+                with pv.session_slot(Path(tmp),1200,2):
+                    with self.assertRaisesRegex(RuntimeError,'concurrency limit'):
+                        with pv.session_slot(Path(tmp),1200,2): self.fail('Limit was bypassed')
+                with pv.session_slot(Path(tmp),1201,2): pass
+            with pv.session_slot(Path(tmp),1200,2): pass
             with self.assertRaises(ValueError):
-                with pv.portal_login_lock(1200):
+                with pv.session_slot(Path(tmp),1200,2):
                     raise ValueError('Session failed')
-            with pv.portal_login_lock(1200):
+            with pv.session_slot(Path(tmp),1200,2):
                 pass  # Exceptions release the account slot too.
 
     def test_exec_is_one_argument_inside_blue_not_host_shell(self):
@@ -64,9 +62,8 @@ class PortalTests(unittest.TestCase):
         self.assertIn('Match User agent,observer', block)
         self.assertIn('DisableForwarding yes', block)
         self.assertIn('PermitUserRC no', block)
-        # UID flock, not MaxSessions=1: OpenSSH channel teardown can lag exit
-        # status and spuriously reject sequential commands on a reused transport.
-        self.assertNotIn('MaxSessions 1', block)
+        self.assertIn('MaxSessions 16', block)
+        self.assertNotIn('MaxSessions 1', [line.strip() for line in block.splitlines()])
         self.assertIn('ForceCommand /usr/local/libexec/paper-vianden-ssh', block)
         self.assertNotIn('Match all', block)
         for name in ('root\nForceCommand evil', '../root', 'a,b', 'x y'):

@@ -16,7 +16,7 @@ SSH operator (no Docker group; fixed sudo commands)
 An optional root-configured SSH portal maps authenticated Unix UID/account pairs
 to blue or white, never a client-selected role. A custom forced login shell
 prevents host-shell startup files and sends commands as one argument into the
-selected workstation. On first login it starts a bounded-lifetime owner service,
+selected workstation. A human-owned lease starts a bounded-lifetime owner service,
 which holds a private PTY independently of SSH connections. White mounts journals
 read-only, has no Docker socket/admin key, and joins management only. See
 [SSH access](ssh-access.md) for configuration and current single-run limits.
@@ -71,5 +71,6 @@ receives only employee activity and mixed raw DNS logs, not story source or
 answer journals. Office DNS resolves a fixed Docker-alias allowlist; transfer
 slots have seeded phase jitter around a recoverable carrier. Unknown queries
 are never forwarded. No ports are published for the DNS sink or
-banner emulators. There is no model runtime, scoring service or automatic
-evidence retention.
+banner emulators. There is no model runtime or scoring service. A separate central collector gathers
+observable evidence without instructor truth. SOC findings and evidence are
+archived outside the disposable filesystem before normal teardown. See [demo](demo.md).

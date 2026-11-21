@@ -4,7 +4,7 @@
 
 For agent/human portal deployments, follow [SSH workstation access](ssh-access.md):
 agent accounts enter blue directly, humans enter read-only white, and connections
-share a managed run that survives disconnects until its lease expires. The
+share a human-reserved managed run that survives disconnects until its lease expires. The
 operator-owned foreground workflow below remains supported separately.
 
 ## Start and finish
@@ -142,6 +142,9 @@ tail -n 20 /var/log/simulated-users/activity.jsonl
 tail -n 20 /var/log/dns/queries.jsonl
 ```
 
+The central `evidence` command and HTTP feed collect the observable logs; see
+[demo operations](demo.md). Save agent findings under `/var/lib/soc-ai`.
+
 The raw DNS journal mixes office lookups with other range-local DNS activity;
 it contains timestamps, source IPs and query names, not attack labels or alerts.
 Correlate it with actual target authentication/application/database logs, target
@@ -153,12 +156,13 @@ answer journal. [Instructor notes](scenario-instructors.md) contain spoilers;
 keep those and control access out of black-box LLM evaluations. This avoids
 accidental answer-key exposure, not a separate tenant security boundary.
 Health checks do not require all workflows to succeed: defender actions can
-legitimately break them. All journals and processes disappear at teardown.
+legitimately break them. Normal teardown preserves bounded evidence archives outside the disposable session.
 
 ## Data and troubleshooting
 
-Logs and captures inside the session disappear at teardown. Export anything
-needed explicitly before ending it; evidence retention is not automatic.
+Store findings under `/var/lib/soc-ai` and use the human export/download commands
+in the [demo guide](demo.md). Normal teardown also attempts a bounded archive;
+review its manifest and download important results before forced termination.
 
 - No active range: its owner must explicitly start one.
 - A session is already active: join it, or have its owner stop it.

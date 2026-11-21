@@ -1,3 +1,21 @@
+# Demo ownership and central evidence changes
+
+The expanded suite passes 41 unit tests, covering human reservations/token
+isolation, expiration, parallel tool limits, export-before-reset ordering,
+fail-closed deliberate teardown, evidence cursors/deduplication and safe archives.
+
+Isolated Docker rehearsals exercised both normal and contained scenarios:
+normal completed all 47 events and 32 DNS transfers; locking the file-host fixture
+account through blue prevented the objective and all DNS transfers. Findings and
+central observations were included in the export. Six ordinary protocols passed;
+FTP/mail hit verified Rosetta errors on the ARM Mac and are not counted as passes.
+The native portal acceptance script requires all eight ordinary-work checks.
+
+The SSH acceptance client and containment logic are scripted. They validate the
+interface an external SOC architecture uses; they do not measure an AI model.
+
+---
+
 # Validation record
 
 ## Synthetic activity layer

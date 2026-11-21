@@ -113,7 +113,7 @@ the objective after a failed prerequisite.
 
 The current system has one shared range at a time, not isolated concurrent runs.
 There is no built-in LLM, scoring engine, SOC dashboard or whole-network packet
-mirror. Evidence and mutable state disappear with teardown unless exported.
+mirror. Normal teardown archives evidence and SOC findings; other mutable state disappears.
 
 For full stage timings, synthetic-data details and private observation paths,
 see [instructor notes — spoilers](scenario-instructors.md). Do not include those

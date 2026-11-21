@@ -37,6 +37,7 @@ Match User {names}
     ForceCommand {WRAPPER}
     DisableForwarding yes
     PermitTTY yes
+    MaxSessions 16
     PermitUserRC no
     PasswordAuthentication yes
     KbdInteractiveAuthentication no
@@ -64,7 +65,7 @@ Description=Paper Vianden managed workstation owner
 Type=simple
 ExecStart=/usr/bin/python3 -I /opt/paper-vianden/current/pv.py serve --seed {seed} --clock-speed {speed}
 RuntimeMaxSec={lease_seconds}
-TimeoutStopSec=100
+TimeoutStopSec=180
 KillMode=mixed
 Restart=no
 StandardOutput=journal
@@ -91,6 +92,7 @@ def main():
     parser.add_argument('--seed', type=int, default=20260112)
     parser.add_argument('--clock-speed', type=float, default=1)
     parser.add_argument('--lease-hours', type=float, default=26)
+    parser.add_argument('--max-sessions', type=int, default=16)
     parser.add_argument('--configure-ssh', action='store_true', required=True,
                         help='Explicitly authorize scoped sshd config change/reload')
     args = parser.parse_args()
@@ -100,6 +102,8 @@ def main():
         raise SystemExit('Seed, speed or lease is out of bounds')
     if not math.isfinite(args.lease_hours):
         raise SystemExit('Lease must be finite')
+    if not 1 <= args.max_sessions <= 32:
+        raise SystemExit('Use 1..32 concurrent workstation sessions')
     for path in (ROOT, ROOT/'pv.py', ROOT/'tools', ROOT/'runtime'):
         info = path.stat()
         if info.st_uid != 0 or info.st_mode & 0o022:
@@ -126,7 +130,8 @@ def main():
     info = config.lstat()
     if config.is_symlink() or info.st_uid != 0 or info.st_mode & 0o022:
         raise SystemExit('Unsafe portal configuration directory')
-    atomic(config/'portals.json', json.dumps({'accounts': accounts}, indent=2)+'\n', 0o600)
+    atomic(config/'portals.json', json.dumps({'accounts': accounts,'max_sessions':args.max_sessions,
+           'lease_minutes':max(1,round(args.lease_hours*60))}, indent=2)+'\n', 0o600)
     atomic(WRAPPER, '''#!/bin/sh
 # Fixed role comes from root-owned UID policy, never client arguments.
 exec /usr/bin/sudo -n /usr/local/bin/paper-vianden portal "--exec=${SSH_ORIGINAL_COMMAND-}"
@@ -163,7 +168,7 @@ exec /usr/bin/sudo -n /usr/local/bin/paper-vianden portal "--exec=${SSH_ORIGINAL
                 # Atomic replacement, never follow a user-controlled destination link.
                 atomic(path, '', 0o644)
     print('Configured role-bound SSH portals. Passwords and keys were not changed.')
-    print('First login starts a managed range; reconnects join it until lease expiry.')
+    print('Human range claim/start controls the exercise; agent logins only join it.')
     print('No boot enabling, independent runs, idle renewal or read-only SSH forwarding is provided.')
 
 
