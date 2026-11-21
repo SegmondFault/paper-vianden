@@ -1,4 +1,4 @@
-# Quickstart - players
+# Quickstart - participants
 
 Your SOC models should run outside Paper Vianden and use SSH tools to work inside it.
 Replace `range.example` with the deployment host. Get credentials privately from
