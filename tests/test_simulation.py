@@ -24,6 +24,18 @@ import scenario_sink as sink
 
 
 class SimulationTests(unittest.TestCase):
+    def test_dns_accepts_standard_edns_cookie_queries(self):
+        import struct
+        wire=b''.join(bytes([len(x)])+x.encode() for x in 'portal.office.range.test'.split('.'))+b'\0'
+        question=wire+struct.pack('!HH',1,1)
+        cookie=struct.pack('!HH',10,8)+b'12345678'
+        packet=struct.pack('!6H',123,0x0100,1,0,0,1)+question+b'\0'+struct.pack('!HHIH',41,1232,0,len(cookie))+cookie
+        with patch.object(sink.socket,'gethostbyname',return_value='10.0.0.2'):
+            name,reply=sink.dns_reply(packet)
+        self.assertEqual(name,'portal.office.range.test')
+        self.assertEqual(struct.unpack('!6H',reply[:12])[3:],(1,0,0))
+        self.assertEqual(reply[12:12+len(question)],question)
+        with self.assertRaises(ValueError):sink.dns_reply(packet[:-1])
     def test_speed_validation(self):
         for value in ('nan', 'inf', '-1', '0', '3601', 'oops'):
             with self.assertRaises(ValueError):

@@ -1,3 +1,10 @@
+# Standard DNS clients
+
+The suite passes 49 unit tests, including bounded EDNS version-0/cookie queries
+used by standard `dig` clients. The sink remains non-forwarding and range-local.
+Malformed additional records are rejected. This was found while exercising the
+fresh-DNS logging check after startup cleanup.
+
 # Live-view cleanup
 
 The current suite passes 48 unit tests. Startup now clears all four role views,

@@ -25,8 +25,8 @@ def record(protocol, peer, **fields):
 def dns_reply(packet):
     if len(packet) < 17:
         raise ValueError('Short query')
-    ident, flags, count, _, _, _ = struct.unpack('!6H', packet[:12])
-    if flags & 0x8000 or count != 1:
+    ident,flags,count,answers,authority,additional=struct.unpack('!6H',packet[:12])
+    if flags&0x8000 or count!=1 or answers or authority or additional not in (0,1):
         raise ValueError('Not a single query')
     offset, labels = 12, []
     while True:
@@ -40,8 +40,18 @@ def dns_reply(packet):
             raise ValueError('Invalid label')
         labels.append(packet[offset:offset+size].decode('ascii'))
         offset += size
-    if offset+4 != len(packet) or offset > 267:
+    question_end=offset+4
+    if question_end>len(packet) or offset>267:
         raise ValueError('Invalid question')
+    if additional:
+        # Standard clients append an EDNS OPT record (often including a cookie).
+        # Accept bounded version-0 OPT data; the small fixture reply needs no OPT.
+        tail=packet[question_end:]
+        if len(tail)<11 or tail[0]!=0:raise ValueError('Invalid EDNS record')
+        kind,udp_size,ttl,size=struct.unpack('!HHIH',tail[1:11])
+        if kind!=41 or (ttl>>16)&255 or len(tail)!=11+size:
+            raise ValueError('Invalid EDNS record')
+    elif question_end!=len(packet):raise ValueError('Unexpected trailing data')
     name = '.'.join(labels).lower()
     # NXDOMAIN for everything else; never forward queries anywhere.
     allowed = name.endswith('.telemetry.range.test') or name in NAMES
@@ -51,7 +61,7 @@ def dns_reply(packet):
         ip = socket.inet_aton(socket.gethostbyname(NAMES[name]))
         answer = struct.pack('!HHHIH4s', 0xc00c, 1, 1, 60, 4, ip)
     header = struct.pack('!6H', ident, 0x8400 if allowed else 0x8403, 1, bool(answer), 0, 0)
-    return name, header+packet[12:]+answer
+    return name,header+packet[12:question_end]+answer
 
 
 class DNS(socketserver.BaseRequestHandler):
