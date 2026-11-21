@@ -4,6 +4,20 @@ Use Python for lifecycle code and Compose YAML for network/service definitions.
 Prefer existing tools and images over implementing service daemons. Keep changes
 small and document both supported behaviour and known gaps.
 
+Enable the public-source checks in your checkout:
+
+```sh
+git config core.hooksPath .githooks
+python3 tools/check_public_tree.py
+python3 tools/check_public_tree.py --history
+```
+
+The hooks reject private document/data paths, classified labels and common
+credential formats. They inspect Git objects, so force-adding an ignored document
+does not bypass the check. Review provenance as well: generic automated checks
+cannot recognize confidential prose without identifying labels. Do not copy
+source exercise documents, meeting notes or server records into public guides.
+
 For the current prototype, these checks do not start a range:
 
 ```sh
