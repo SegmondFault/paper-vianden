@@ -72,11 +72,55 @@ tested through real SSH accounts (credentials and instance addresses omitted):
   its disposable filesystem and stopped its Sysbox helpers automatically.
 - A previous blue-only test file was absent in the fresh run. The host Docker
   daemon's PID/start time and unrelated workload state stayed unchanged.
-- The final live preset was restored to seed 20260112, a 1x scenario clock and a
-  26-hour lease. Fresh blue access and white status confirmed that preset.
+- That initial rehearsal restored seed 20260112, a 1x clock and a 26-hour lease.
+  The later accelerated qualification below supersedes that operating preset.
 
 No provider reboot/power-loss test was performed. Per-user concurrent ranges,
 idle timeout, lease renewal and participant reset controls are not implemented.
+
+## Accelerated evidence and single-login qualification
+
+A blue-side evidence collection run at 120x reconstructed valid-account gateway
+access, directory/API activity, account switching, lateral SSH, a literal SQL
+export query, a staged fixture and encoded DNS transfers. Collector traffic was
+identified by blue source IPs; white ground truth was consulted only afterward
+for event-count verification. Authentication logs do not provide precise event
+timestamps, so collection time bounds and packet captures were used. Exact SSH
+command execution and the emulated initial exploit cannot be proved from those
+logs alone; real deployments should add consistent timestamped host auditing.
+
+That test exposed a timing-generator defect: the old Gaussian draw for seed 42
+had a stronger unrelated spectral peak than the intended carrier. Stratified,
+seed-shuffled phase jitter fixed the small-sample imbalance. A fresh native run
+at 300x then verified:
+
+- All 47 story events completed successfully, confirmed afterward through white.
+- All 32 decoded DNS records matched records in the staged file.
+- Analysis of actual DNS packet-capture timestamps recovered a 680-second
+  simulated period against a nominal 675 seconds (less than 1% error).
+- Observed phase coherence was 0.3683, with irregular interarrival intervals
+  (CV 0.1769). This is an exploratory result, not a significance/false-positive
+  assessment or a guarantee for all real captures.
+- Source tests recover within 15 seconds for 100 seed variants. A default-only
+  test would have missed the original seed-42 regression.
+
+Single-login enforcement was tested through real SSH: a second blue workstation
+session was rejected, white could observe concurrently, abrupt disconnect
+released the blue slot, and sequential commands on a reused SSH transport
+worked. Enforcement uses a UID-bound lock, not `MaxSessions=1`, which caused a
+channel-teardown race for legitimate sequential clients.
+
+Evidence exports were checksum-verified and retained privately outside the
+range, never committed to Git. Test collectors/captures were removed by range
+teardown. The latest portal source was reinstalled and retested on fresh fixtures;
+then the test run was stopped again. The operating preset is seed 42, a 120x
+clock (about 12 minutes of scenario time), and a 30-minute real-time lease. First
+portal login starts a new clean run. The host Docker daemon remained unchanged.
+
+This qualifies a controlled, single-range research pilot. It is not a blind
+independent-agent benchmark, a 24-hour endurance test or a hardened multi-tenant
+security certification. Red/green agent portals and the flat scenario remain
+roadmap items.
 
 ## Earlier prototype checks
 
