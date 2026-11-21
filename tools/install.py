@@ -37,7 +37,7 @@ def main():
     args = parser.parse_args()
     if os.geteuid() != 0: raise SystemExit('Administrator privileges required.')
     if not re.fullmatch(r'[a-z][a-z0-9_-]{0,30}', args.account): raise SystemExit('Invalid account name')
-    for tool in ['docker', 'dockerd', 'mkfs.ext4', 'mount', 'unshare', 'systemd-run', 'visudo', 'dpkg-deb']:
+    for tool in ['docker', 'dockerd', 'containerd', 'mkfs.ext4', 'mount', 'unshare', 'systemd-run', 'visudo', 'dpkg-deb']:
         if not shutil.which(tool): raise SystemExit('Required existing tool missing: '+tool)
     if subprocess.run(['systemctl', 'is-active', '--quiet', 'paper-vianden-session.service']).returncode == 0:
         raise SystemExit('Stop the current range before updating its release.')

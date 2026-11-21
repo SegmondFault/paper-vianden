@@ -180,6 +180,12 @@ def run_session(args):
         Path('/run/sysbox').mkdir(mode=0o755, exist_ok=True)
         command(['/usr/bin/mount', '--bind', str(socket_dir), '/run/sysbox'])
         (MOUNT/'tmp').mkdir()
+        for directory in ['exec', 'containerd-state']:
+            path = RUNTIME/directory
+            if path.exists():
+                shutil.rmtree(path)
+        for filename in ['docker.sock', 'docker.pid', 'containerd.sock', 'containerd.sock.ttrpc']:
+            (RUNTIME/filename).unlink(missing_ok=True)
         config = RUNTIME/'daemon.json'
         config.write_text('{}\n')
         def launch(label, argv):
@@ -189,10 +195,22 @@ def run_session(args):
                                        start_new_session=True, preexec_fn=die_with_parent)
             processes.append(process)
             return process
+        # Debian's dockerd may discover the system containerd automatically.
+        # Explicitly use a new containerd in this same private mount namespace.
+        containerd_config = RUNTIME/'containerd.toml'
+        containerd_config.write_text('version = 2\ndisabled_plugins = ["io.containerd.grpc.v1.cri"]\n')
+        launch('containerd', ['/usr/bin/containerd', '--config='+str(containerd_config),
+                             '--root='+str(MOUNT/'containerd'),
+                             '--state='+str(RUNTIME/'containerd-state'),
+                             '--address='+str(RUNTIME/'containerd.sock')])
+        wait_for(lambda: (RUNTIME/'containerd.sock').exists(), processes)
         launch('docker', ['/usr/sbin/dockerd', '--config-file='+str(config),
                          '--host=unix://'+str(SOCKET), '--group=root',
                          '--data-root='+str(MOUNT/'docker'),
                          '--exec-root='+str(RUNTIME/'exec'), '--pidfile='+str(RUNTIME/'docker.pid'),
+                         '--containerd='+str(RUNTIME/'containerd.sock'),
+                         '--containerd-namespace=paper-vianden',
+                         '--containerd-plugins-namespace=paper-vianden-plugins',
                          '--bridge=none', '--iptables=false',
                          '--ip-forward=false', '--ip-masq=false',
                          '--exec-opt=native.cgroupdriver=cgroupfs',
