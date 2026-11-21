@@ -18,10 +18,10 @@ does not bypass the check. Review provenance as well: generic automated checks
 cannot recognize confidential prose without identifying labels. Public text
 describes product capabilities, configuration and operation only.
 
-For the current prototype, these checks do not start a range:
+These source checks do not start a range:
 
 ```sh
-python3 -m py_compile prototype/range
+python3 -m py_compile pv.py runtime/*.py tools/*.py prototype/range
 bash -n prototype/scripts/node-init.sh prototype/scripts/workstation-init.sh prototype/start.sh prototype/stop.sh
 ./prototype/range config
 ./prototype/range config --minimal
@@ -32,8 +32,8 @@ Use the [user guide](docs/users.md) for runtime validation on a dedicated lab
 engine, including explicit shutdown. Preserve dependency source as a pinned
 submodule; document changes to sources.json when its revision changes.
 
-Do not commit keys, credentials, runtime records, server inventories or restricted
-scenario material. Published weak target credentials must be clearly synthetic.
+Do not commit keys, credentials, runtime records, server inventories or private
+source material. Published weak target credentials must be clearly synthetic.
 
 Preserve third-party copyright/licence notices and record upstream revisions.
 The project licence covers original Paper Vianden contributions; dependencies

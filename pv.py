@@ -85,6 +85,8 @@ def join(role, name=None):
         if subprocess.run(['/usr/bin/systemctl', 'is-active', '--quiet',
                            'paper-vianden-session.service']).returncode:
             raise RuntimeError('No active range. An owner must explicitly start one first.')
+        if not (RUNTIME/'active.json').exists():
+            raise RuntimeError('The range is starting; wait for the owner to report readiness.')
         active = json.loads((RUNTIME/'active.json').read_text())
         name = active['name']
         if not name.startswith('paper-vianden-') or not name.removeprefix('paper-vianden-').isalnum():
@@ -239,7 +241,10 @@ def run_session(args):
                                env=ENV, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             state = capture(DOCKER+['inspect', '--format', '{{.State.Running}}', name])
             if state != 'true':
-                raise RuntimeError(capture(DOCKER+['logs', '--tail', '50', name]))
+                detail = capture(DOCKER+['inspect', '--format', '{{json .State}}', name])
+                logs = command(DOCKER+['logs', '--tail', '60', name], text=True,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout
+                raise RuntimeError('Envelope exited: '+detail+'\n'+logs)
             return r.returncode == 0
         wait_for(ready, processes, seconds=600)
         print('Paper Vianden ready. Exit the shell to destroy this session.', flush=True)
