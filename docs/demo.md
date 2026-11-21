@@ -114,3 +114,13 @@ Red and green have separate workstations, no blue key and no instructor journal.
 Green is UID 65534 and offers `green-work` actions with an observation journal.
 All three roles can save reports under their own `/var/lib/soc-ai`; exports keep
 these separate. LLM-driven red activity is unscored, not labelled a scripted success.
+
+## Clean starts
+
+Every new start/reset clears live journals, all role findings and shell histories,
+target authentication/application logs, SQL general logs and readiness-probe mail
+before the collector and actors begin. Seeded business fixtures remain available.
+The new run has its own `/var/log/soc-evidence/clean-start.json` identifier.
+Reconnecting keeps the active investigation; saved host-side exports survive
+case cleanup. Host operational SSH/audit logs are outside the disposable lab.
+`python3 tools/rehearse_clean_start.py` verifies live-view isolation and retained exports.

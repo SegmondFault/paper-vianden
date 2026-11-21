@@ -18,7 +18,9 @@ ssh vianden@range.example 'range start --token TOKEN --seed 42 --clock-speed 60'
 ssh vianden@range.example 'range status'
 ```
 
-Wait for `phase: ready`; cold startup can take several minutes. This default runs
+Wait for `phase: ready`; cold startup can take several minutes. Every new start
+or reset clears live logs, findings and shell histories across all four roles
+before exercise traffic begins. Saved exports stay outside the live run. This default runs
 scripted ordinary employees and the pre-programmed intrusion. A 60x clock spans
 24 simulated hours in about 24 minutes, plus actual protocol delays.
 

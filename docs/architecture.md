@@ -74,3 +74,8 @@ are never forwarded. No ports are published for the DNS sink or
 banner emulators. There is no model runtime or scoring service. A separate central collector gathers
 observable evidence without instructor truth. SOC findings and evidence are
 archived outside the disposable filesystem before normal teardown. See [demo](demo.md).
+
+Startup runs readiness checks first, wipes live role journals/findings/histories
+and target evidence, then starts the collector and traffic actors. Journal files
+with active sink writers are truncated in place so fresh DNS/HTTP events remain
+visible. Saved archives and host operational logs are outside that cleanup.

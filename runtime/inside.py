@@ -11,6 +11,26 @@ COMPOSE = ['docker', 'compose', '-p', 'paper-vianden', '--profile', 'extended',
            '-f', str(ROOT/'prototype/docker-compose.yml'), '-f', str(ROOT/'compose.yaml')]
 
 
+def clear_live_evidence():
+    """Run once after readiness probes, before telemetry and scenario actors."""
+    program=(ROOT/'runtime/reset_evidence.py').read_text()
+    terminals=('defender','red','green','white','web-01','vpn-gw-01','file-01',
+               'app-01','admin-01','mail-01','ftp','mail','badge','bof')
+    for service in terminals:
+        run(COMPOSE+['exec','-T','--user','0',service,'python3','-c',program])
+    config=json.loads(subprocess.check_output(COMPOSE+['config','--format','json'],cwd=ROOT))
+    names=('activity-journal','story-journal','dns-evidence','soc-evidence','green-journal',
+           'agent-findings','red-findings','green-findings')
+    argv=['docker','run','--rm','--network','none','--read-only','--cap-drop','ALL','--cap-add','DAC_OVERRIDE']
+    for name in names:
+        argv+=['--mount','type=volume,src='+config['volumes'][name]['name']+',dst=/evidence/'+name]
+    run(argv+['--entrypoint','python3','paper-vianden/toolbox:local','-c',program,'--volumes'])
+    run(COMPOSE+['exec','-T','db-01','env','MYSQL_PWD=S3cretDB!2024','mariadb','-u','root','-e',
+                 'SET GLOBAL general_log=OFF; TRUNCATE TABLE mysql.general_log; SET GLOBAL general_log=ON'])
+    run(COMPOSE+['exec','-T','defender','python3','-c',
+                 "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://mail-sink.dmz:8025/api/v1/messages',method='DELETE'),timeout=5).read()"])
+
+
 def run(args, **kw):
     return subprocess.run(args, cwd=ROOT, check=True, **kw)
 
@@ -38,7 +58,7 @@ def main():
         run(['python3', str(ROOT/'prototype/range'), 'init'])
         print('Starting the seeded service network...', flush=True)
         run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--wait',
-                     '--wait-timeout', '180', '--scale', 'activity=0', '--scale', 'scenario-runner=0'])
+                     '--wait-timeout','180','--scale','activity=0','--scale','scenario-runner=0','--scale','telemetry=0'])
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
                      '/opt/paper-vianden/runtime/initialise.py'])
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
@@ -52,6 +72,10 @@ def main():
                            "'[global]\\n   log level = 1 auth_audit:3', 1))")
         run(COMPOSE+['exec', '-T', 'file-01', 'python3', '-c', configure_samba])
         run(COMPOSE+['exec', '-T', 'file-01', 'smbcontrol', 'all', 'reload-config'])
+        print('Clearing live terminal evidence and startup probe logs...',flush=True)
+        clear_live_evidence()
+        run(COMPOSE+['up','-d','--no-build','--pull','never','--no-deps','--scale','telemetry=1',
+                     '--wait','--wait-timeout','120','telemetry'])
         print('Starting simulated users and the intrusion storyline...', flush=True)
         run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--no-deps',
                      '--scale', 'activity=1', '--scale', 'scenario-runner=1',

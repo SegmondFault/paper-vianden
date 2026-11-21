@@ -75,7 +75,7 @@ class Feed:
         self.events = deque(maxlen=5000)
         self.offsets = {}
         self.sql_seen = {}
-        self.sql_since = '1970-01-01 00:00:00.000000'
+        self.sql_since=datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S.%f')
         self.lock = threading.RLock()
         self.poll_lock = threading.Lock()
         self.last_poll = 0
@@ -140,7 +140,7 @@ class Feed:
                  "'user_host',user_host,'command',command_type,'argument',LEFT(argument,8192),'thread',thread_id) "
                  "FROM mysql.general_log WHERE event_time >= '"+self.sql_since+"' AND command_type='Query' "
                  "AND argument NOT LIKE '%pv-evidence%' ORDER BY event_time,thread_id,argument LIMIT 500")
-        output = cli(['mariadb','--skip-ssl','--connect-timeout=3','-h','db-01.internal','-u','root','--batch','--raw','-N','-e',query],
+        output = cli(['mariadb','--skip-auto-rehash','--skip-ssl','--connect-timeout=3','-h','db-01.internal','-u','root','--batch','--raw','-N','-e',query],
                      env=dict(os.environ, MYSQL_PWD='S3cretDB!2024'))
         for line in output.splitlines():
             row = json.loads(line); ident = hashlib.sha256(line.encode()).hexdigest()

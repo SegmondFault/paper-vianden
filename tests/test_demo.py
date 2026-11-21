@@ -13,9 +13,49 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'runtime'))
 from demo_control import Controller
 from evidence import Feed, READ_FILES
 from export_evidence import export
+from reset_evidence import clear_directory,truncate_regular,volume_reset,VOLUMES
 
 
 class DemoTests(unittest.TestCase):
+    def test_live_evidence_reset_clears_hidden_files_and_links_but_keeps_exports(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);saved=root/'saved-export';saved.write_text('retain')
+            live=root/'live';live.mkdir();(live/'.history').write_text('old')
+            (live/'link').symlink_to(saved);(live/'nested').mkdir();(live/'nested/record').write_text('old')
+            self.assertEqual(clear_directory(live),3)
+            self.assertEqual(list(live.iterdir()),[]);self.assertEqual(saved.read_text(),'retain')
+            link=root/'directory-link';link.symlink_to(live)
+            with self.assertRaises(RuntimeError):clear_directory(link)
+
+    def test_log_reset_never_follows_a_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);log=root/'auth.log';log.write_text('old')
+            alias=root/'alias';alias.symlink_to(log)
+            self.assertFalse(truncate_regular(alias));self.assertEqual(log.read_text(),'old')
+            self.assertTrue(truncate_regular(log));self.assertEqual(log.read_text(),'')
+
+    def test_live_sink_log_descriptor_remains_visible_after_reset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            log=Path(tmp)/'queries.jsonl'
+            with log.open('a') as writer:
+                writer.write('startup\n');writer.flush()
+                clear_directory(Path(tmp),preserve_logs=True)
+                self.assertEqual(log.read_text(),'')
+                writer.write('fresh\n');writer.flush()
+                self.assertEqual(log.read_text(),'fresh\n')
+
+    def test_every_live_role_volume_gets_a_new_clean_run_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp)
+            for name in VOLUMES:(base/name).mkdir();(base/name/'old').write_text('old')
+            volume_reset(base)
+            first=json.loads((base/'soc-evidence/clean-start.json').read_text())
+            self.assertEqual(set(first['roles']),{'blue','red','green','white'})
+            self.assertTrue(all(not (base/name/'old').exists() for name in VOLUMES))
+            volume_reset(base)
+            second=json.loads((base/'soc-evidence/clean-start.json').read_text())
+            self.assertNotEqual(first['run_id'],second['run_id'])
+
     def controller(self,directory):
         return Controller(directory,Mock(return_value=False),Mock(),Mock(),Mock(return_value={'id':'saved'}),Mock(),Mock())
 

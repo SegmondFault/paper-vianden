@@ -1,3 +1,16 @@
+# Live-view cleanup
+
+The current suite passes 48 unit tests. Startup now clears all four role views,
+findings, histories, target logs, SQL general logs and readiness-probe mail before
+starting telemetry/actors. Unit coverage includes preserving active sink log
+file descriptors while removing their old contents, fresh run IDs and retaining
+saved exports outside the live cleanup.
+
+Native four-mode validation passed on the preceding role release: scripted /
+scripted, red LLM / scripted, red LLM / green LLM, and scripted / green LLM. Each
+mode passed all eight ordinary-work probes, role gates, private findings export,
+reset isolation and clean stop. No role login restarted the stopped exercise.
+
 # External team modes
 
 The suite now includes 44 unit tests. Human-selected red/green mode gates,
