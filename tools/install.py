@@ -85,6 +85,11 @@ def main():
                 shutil.copyfile(Path(temp)/'usr/bin'/name, runtime/name)
                 (runtime/name).chmod(0o755)
             shutil.copyfile(Path(temp)/'usr/share/doc/sysbox-ce/copyright', runtime/'COPYRIGHT')
+        with tempfile.TemporaryDirectory(prefix='paper-fuse-') as temp:
+            run('dpkg-deb', '--extract', str(bundle/'fuse3.deb'), temp)
+            shutil.copyfile(Path(temp)/'bin/fusermount3', runtime/'fusermount3')
+            (runtime/'fusermount3').chmod(0o755)
+            shutil.copyfile(Path(temp)/'usr/share/doc/fuse3/copyright', runtime/'FUSE_COPYRIGHT')
         (release/'pv.py').chmod(0o755)
     # Archives preserve the builder's numeric UID when extracted by root.
     # Never carry that identity into a privileged deployed release.

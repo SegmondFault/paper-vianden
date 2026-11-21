@@ -25,6 +25,14 @@
       "version_reviewed": "0.7.1",
       "license": "Apache-2.0",
       "usage": "Pinned runtime extracted into administrator-owned installations; package scripts are not run"
+    },
+    {
+      "name": "FUSE mount helper",
+      "url": "https://packages.debian.org/bookworm/fuse3",
+      "version": "3.14.0-4",
+      "source": "https://sources.debian.org/src/fuse3/3.14.0-4/",
+      "usage": "Private fusermount3 helper only; no system package installation",
+      "license": "See preserved Debian copyright file (helper GPL-2.0-or-later)"
     }
   ]
 }

@@ -29,3 +29,10 @@ Sysbox, Docker and individual service images retain their respective licences.
 The root MIT licence applies to original Paper Vianden work, not to a relicensing
 of bundled or referenced third-party software. Keep their notices and applicable
 distribution obligations when preparing release artifacts.
+
+## FUSE mount helper
+
+The pinned Debian fuse3 package supplies fusermount3 for private runtime use.
+Its complete copyright/licence notice is preserved beside the extracted helper.
+The helper is GPL-2.0-or-later; corresponding source is available at
+https://sources.debian.org/src/fuse3/3.14.0-4/. No changes are made to it.

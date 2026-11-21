@@ -72,7 +72,7 @@ def trusted_install():
         info = path.stat()
         if info.st_uid != 0 or info.st_mode & 0o022:
             raise RuntimeError('Administrator-owned, non-writable installation required: '+str(path))
-    for name in ['sysbox-mgr', 'sysbox-fs', 'sysbox-runc']:
+    for name in ['sysbox-mgr', 'sysbox-fs', 'sysbox-runc', 'fusermount3']:
         path = ROOT/'runtime/bin'/name
         info = path.stat()
         if path.is_symlink() or info.st_uid != 0 or info.st_mode & 0o022:

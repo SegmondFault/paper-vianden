@@ -14,6 +14,8 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 SYSBOX_URL = 'https://github.com/nestybox/sysbox/releases/download/v0.7.1/sysbox-ce_0.7.1.linux_amd64.deb'
 SYSBOX_SHA = '9d6d5484f980d0a17f86c492c1262015c2afb66280bdb97215b79fde6a0261c5'
+FUSE_URL = 'https://deb.debian.org/debian/pool/main/f/fuse3/fuse3_3.14.0-4_amd64.deb'
+FUSE_SHA = '63b97d9b9acf9e8346ba59e87aa36a47205f05050808f8e9087dca603fd07ab8'
 
 
 def sha(path):
@@ -78,10 +80,16 @@ def main():
             shutil.copyfileobj(source, dest)
     if sha(package) != SYSBOX_SHA:
         raise RuntimeError('Sysbox checksum mismatch')
+    fuse = out/'fuse3.deb'
+    if not fuse.exists():
+        with urllib.request.urlopen(FUSE_URL) as source, fuse.open('wb') as dest:
+            shutil.copyfileobj(source, dest)
+    if sha(fuse) != FUSE_SHA:
+        raise RuntimeError('FUSE helper checksum mismatch')
     manifest = {'architecture': 'amd64', 'services': len(cfg['services']),
                 'source_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
                 'images': images, 'files': {name: sha(out/name) for name in
-                    ['targets.tar.gz', 'envelope.tar.gz', 'source.tar.gz', 'sysbox.deb']}}
+                    ['targets.tar.gz', 'envelope.tar.gz', 'source.tar.gz', 'sysbox.deb', 'fuse3.deb']}}
     (out/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
     print('Prepared offline library under artifacts/. No range was started.')
 
