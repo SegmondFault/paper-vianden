@@ -1,5 +1,8 @@
 # Paper Vianden
 
+## Important - the author makes no claims as to the security or validity of this range!!
+### Right now, it's really just for smoke testing
+
 An on-demand, disposable network for attack and defence testing.
 
 One Sysbox system container runs 29 service and workstation containers across
