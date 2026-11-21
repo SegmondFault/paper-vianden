@@ -89,6 +89,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--blue-account', required=True)
     parser.add_argument('--white-account')
+    parser.add_argument('--red-account')
+    parser.add_argument('--green-account')
     parser.add_argument('--seed', type=int, default=20260112)
     parser.add_argument('--clock-speed', type=float, default=1)
     parser.add_argument('--lease-hours', type=float, default=26)
@@ -111,7 +113,8 @@ def main():
     if Path('/usr/local/bin/paper-vianden').resolve() != ROOT/'pv.py':
         raise SystemExit('Install/select this release before configuring portals')
     accounts = {}
-    for name, role in ((args.blue_account, 'blue'), (args.white_account, 'white')):
+    for name,role in ((args.blue_account,'blue'),(args.white_account,'white'),
+                      (args.red_account,'red'),(args.green_account,'green')):
         if not name:
             continue
         account_name(name)

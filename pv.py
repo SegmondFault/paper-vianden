@@ -105,13 +105,13 @@ def join_argv(role, name, execute=None, tty=True):
     shell = ['bash'] if execute is None else ['bash', '-lc', execute]
     if role == 'control':
         return DOCKER+['exec']+flags+[name]+shell
-    service = {'blue': 'defender', 'red': 'red', 'white': 'white'}[role]
+    service = {'blue':'defender','red':'red','white':'white','green':'green'}[role]
     return DOCKER+['exec']+flags+[name]+INNER+['exec']+([] if tty else ['-T'])+[service]+shell
 
 
 def portal_role(config, uid, username):
     record = config.get('accounts', {}).get(username, {})
-    if record.get('uid') != uid or record.get('role') not in ('blue', 'white'):
+    if record.get('uid') != uid or record.get('role') not in ('blue','white','red','green'):
         raise RuntimeError('This account has no workstation portal permission')
     return record['role']
 
@@ -193,6 +193,8 @@ def human_control(words,uid,username,config):
     if words and words[0]=='status' and isinstance(result,dict):
         active=RUNTIME/'active.json'
         result['phase']=json.loads(active.read_text()).get('state') if active.exists() else 'stopped'
+        preset=RUNTIME/'demo-run.json'
+        result['modes']=json.loads(preset.read_text()) if preset.exists() else {}
     if isinstance(result,bytes): sys.stdout.buffer.write(result)
     else: print(json.dumps(result),flush=True)
 
@@ -228,6 +230,10 @@ def portal_connect(role, execute=None):
     for attempt in range(900):
         active = RUNTIME/'active.json'
         if active.exists() and json.loads(active.read_text()).get('state') == 'ready':
+            if role=='green' and json.loads(active.read_text()).get('normal_traffic')!='llm':
+                raise RuntimeError('Green LLM access requires the human to select --normal-traffic llm for this run')
+            if role=='red' and json.loads(active.read_text()).get('attacker')!='llm':
+                raise RuntimeError('Red LLM access requires the human to select --attacker llm for this run')
             join(role, execute=execute or None)
             return
         if attempt > 5 and capture(['/usr/bin/systemctl', 'show', '--property=ActiveState',
@@ -247,6 +253,8 @@ def serve(args):
         data=json.loads(preset.read_text())
         args.seed=scenario_seed(str(data['seed']))
         args.clock_speed=scenario_speed(str(data['clock_speed']))
+        args.attacker=data.get('attacker','scripted')
+        args.normal_traffic=data.get('normal_traffic','scripted')
     master, slave = pty.openpty()
     process = None
     def terminal():
@@ -254,7 +262,8 @@ def serve(args):
         fcntl.ioctl(slave, termios.TIOCSCTTY, 0)
     try:
         process = subprocess.Popen(['/usr/bin/python3', '-I', str(ROOT/'pv.py'), 'run',
-            '--seed', str(args.seed), '--clock-speed', str(args.clock_speed)],
+            '--seed',str(args.seed),'--clock-speed',str(args.clock_speed),
+            '--attacker',args.attacker,'--normal-traffic',args.normal_traffic],
             stdin=slave, stdout=slave, stderr=slave, env=ENV, preexec_fn=terminal)
         os.close(slave)
         slave = None
@@ -328,7 +337,8 @@ def session(args):
         (RUNTIME/'active.json').unlink(missing_ok=True)
         argv = ['/usr/bin/unshare', '--mount', '--propagation', 'private', '--',
                 '/usr/bin/python3', '-I', str(ROOT/'pv.py'), '_session',
-                'run', '--role', args.role, '--clock-speed', str(args.clock_speed), '--seed', str(args.seed)]
+                'run','--role',args.role,'--clock-speed',str(args.clock_speed),'--seed',str(args.seed),
+                '--attacker',args.attacker,'--normal-traffic',args.normal_traffic]
         if args.check:
             argv.append('--check')
         properties = ['--property=Delegate=yes', '--property=KillMode=mixed',
@@ -379,7 +389,8 @@ def run_session(args):
     container_created = False
     follower = None
     session_info = {'name': name, 'pid': os.getpid(),
-                    'source': manifest.get('source_revision'), 'state': 'starting'}
+                    'source':manifest.get('source_revision'),'state':'starting',
+                    'attacker':args.attacker,'normal_traffic':args.normal_traffic}
     try:
         save_session(session_info)
         group = next(line.split('::', 1)[1].strip() for line in
@@ -456,6 +467,8 @@ def run_session(args):
                         '--label=io.paper-vianden.session=true',
                         '--env', 'PV_CLOCK_SPEED='+str(args.clock_speed),
                         '--env', 'PV_SEED='+str(args.seed),
+                        '--env','PV_ATTACKER_MODE='+args.attacker,
+                        '--env','PV_NORMAL_TRAFFIC='+args.normal_traffic,
                         '--mount', 'type=bind,src='+str(library/'targets.tar.gz')+',dst=/library/targets.tar.gz,readonly',
                         'paper-vianden/envelope:local'], stdout=subprocess.DEVNULL)
         container_created = True
@@ -559,19 +572,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
     run = sub.add_parser('run', help='Start one foreground session; destroy it on exit')
-    run.add_argument('--role', choices=['blue', 'red', 'white'], default='blue')
+    run.add_argument('--role', choices=['blue','red','white','green'], default='blue')
     run.add_argument('--check', action='store_true', help='Check services then destroy the session')
     run.add_argument('--clock-speed', type=scenario_speed, default=1.0,
                      help='Scenario seconds per real second, 1–3600 (default: 1)')
     run.add_argument('--seed', type=scenario_seed, default=20260112,
                      help='Reproducible behaviour variant, unsigned 32-bit integer')
+    run.add_argument('--attacker',choices=('scripted','llm'),default='scripted')
+    run.add_argument('--normal-traffic',choices=('scripted','llm'),default='scripted')
     attach = sub.add_parser('join', help='Join the active session; never starts a range')
-    attach.add_argument('--role', choices=['blue', 'red', 'white', 'control'], default='blue')
+    attach.add_argument('--role',choices=['blue','red','white','green','control'],default='blue')
     portal_parser = sub.add_parser('portal', help='Account-bound SSH workstation portal')
     portal_parser.add_argument('--exec', dest='execute', default=None)
     managed = sub.add_parser('serve', help='Administrator-managed owner terminal')
     managed.add_argument('--seed', type=scenario_seed, default=20260112)
     managed.add_argument('--clock-speed', type=scenario_speed, default=1.0)
+    managed.add_argument('--attacker',choices=('scripted','llm'),default='scripted')
+    managed.add_argument('--normal-traffic',choices=('scripted','llm'),default='scripted')
     sub.add_parser('status', help='Show session state without starting anything')
     sub.add_parser('stop', help='Stop only the active Paper Vianden session')
     args = parser.parse_args()

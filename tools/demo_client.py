@@ -26,7 +26,7 @@ class SSHClient:
         if not self.known_hosts.is_file():raise RuntimeError('Supply a pinned known_hosts file')
 
     def run(self,role,command,timeout=90,check=True,binary=False,input=None):
-        if role not in ('human','agent','admin'):raise ValueError('Unknown role')
+        if role not in ('human','agent','admin','blue','red','green'):raise ValueError('Unknown role')
         prefix='VIANDEN_'+role.upper()
         user=self.values[prefix+'_USER']; host=self.values['VIANDEN_HOST']
         password=self.values.get(prefix+'_PASSWORD')
@@ -58,7 +58,7 @@ class SSHClient:
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('role',choices=('human','agent'));parser.add_argument('command')
+    parser.add_argument('role',choices=('human','agent','blue','red','green'));parser.add_argument('command')
     parser.add_argument('--env-file');parser.add_argument('--known-hosts');parser.add_argument('--binary',action='store_true')
     args=parser.parse_args();client=SSHClient(args.env_file,args.known_hosts)
     result=client.run(args.role,args.command,binary=args.binary)

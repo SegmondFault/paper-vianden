@@ -9,7 +9,8 @@ import time
 
 ROOTS = (Path('/var/log/range-instructor'), Path('/var/log/simulated-users'), Path('/var/log/dns'))
 FILES = {'story': ROOTS[0]/'story.jsonl', 'activity': ROOTS[1]/'activity.jsonl',
-         'dns': ROOTS[2]/'queries.jsonl', 'markers': ROOTS[0]/'scenario-sink.jsonl'}
+         'dns':ROOTS[2]/'queries.jsonl','markers':ROOTS[0]/'scenario-sink.jsonl',
+         'green':Path('/var/log/green-users/activity.jsonl')}
 
 
 def load(path):
@@ -34,7 +35,7 @@ def tail(path, count):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('view', nargs='?', choices=('status', 'story', 'activity', 'dns', 'markers', 'snapshot'), default='status')
+    parser.add_argument('view',nargs='?',choices=('status','story','activity','dns','markers','green','snapshot'),default='status')
     parser.add_argument('--tail', type=int, default=20)
     parser.add_argument('--watch', action='store_true', help='Refresh every two seconds; Ctrl-C to leave')
     parser.add_argument('--check', action='store_true')

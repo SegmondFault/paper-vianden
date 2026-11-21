@@ -135,7 +135,7 @@ def check_status(path=STATUS):
     state = json.loads(path.read_text())
     if state.get('state') != 'running' or time.time()-state['last_tick'] > 90:
         raise RuntimeError('Simulated users are not running')
-    if state.get('mode') not in ('active', 'idle', 'complete'):
+    if state.get('mode') not in ('active','idle','complete','external'):
         raise RuntimeError('Unknown activity schedule state')
     return state
 
@@ -193,6 +193,7 @@ def main():
     state = {'state': 'running', 'last_tick': time.time(), 'successes': {}, 'failures': {},
              'timezone': str(ZONE), 'mode': 'idle', 'reason': 'starting'}
     clock = Clock(os.environ.get('PV_CLOCK_SPEED', '1'), seed=os.environ.get('PV_SEED', str(DEFAULT_SEED)))
+    external=os.environ.get('PV_NORMAL_TRAFFIC','scripted')=='llm'
     workflows = rng_for(clock.seed, 'employee.workflows')
     pauses = rng_for(clock.seed, 'employee.pauses')
     clock.publish()
@@ -204,10 +205,11 @@ def main():
         elapsed = clock.elapsed
         complete = elapsed >= DURATION
         intensity, reason = (0, '24-hour scenario complete') if complete else office_profile(now)
+        if external and not complete:intensity,reason=0,'normal traffic supplied by green LLM'
         intensity = min(1, intensity*office_modulation(clock.seed, elapsed))
         state.update(scenario_seconds=round(elapsed, 2), clock_speed=clock.speed,
                      scenario_time=now.isoformat(),
-                     last_tick=time.time(), mode='complete' if complete else 'active' if intensity > 0 else 'idle',
+                     last_tick=time.time(), mode='complete' if complete else 'external' if external else 'active' if intensity > 0 else 'idle',
                      reason=reason, intensity=round(intensity, 4), local_time=now.astimezone(ZONE).isoformat())
         save_status(state)
         current_mode = (state['mode'], reason)

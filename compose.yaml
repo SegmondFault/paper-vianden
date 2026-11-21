@@ -66,6 +66,9 @@ services:
     entrypoint: [/bin/bash, -c, "exec sleep infinity"]
     read_only: true
     cap_drop: [ALL]
+    # UID 65534 has no effective capabilities. Only the fixed root exporter
+    # uses this to read private findings from both root and green UID files.
+    cap_add: [DAC_OVERRIDE]
     security_opt: [no-new-privileges:true]
     environment: {HOME: /tmp}
     mem_limit: 96m
@@ -79,6 +82,9 @@ services:
       - dns-evidence:/var/log/dns:ro
       - soc-evidence:/var/log/soc-evidence:ro
       - agent-findings:/var/lib/soc-ai:ro
+      - red-findings:/var/lib/soc-ai-red:ro
+      - green-findings:/var/lib/soc-ai-green:ro
+      - green-journal:/var/log/green-users:ro
     # No target networks, administrator keys or Docker socket.
     networks: [management]
     healthcheck:
@@ -105,6 +111,7 @@ services:
       - activity-journal:/var/log/simulated-users:ro
       - dns-evidence:/var/log/dns:ro
       - soc-evidence:/var/log/soc-evidence
+      - green-journal:/var/log/green-users:ro
     networks:
       management: {aliases: [telemetry.management]}
       dmz: {}
@@ -133,6 +140,7 @@ services:
       HOME: /tmp
       PV_CLOCK_SPEED: ${PV_CLOCK_SPEED:-1}
       PV_SEED: ${PV_SEED:-20260112}
+      PV_NORMAL_TRAFFIC: ${PV_NORMAL_TRAFFIC:-scripted}
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,size=8m,mode=1777
     volumes:
@@ -161,7 +169,9 @@ services:
     mem_limit: 96m
     memswap_limit: 96m
     pids_limit: 48
-    environment: {HOME: /tmp}
+    environment:
+      HOME: /tmp
+      PV_ATTACKER_MODE: ${PV_ATTACKER_MODE:-scripted}
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,size=8m,mode=1777
     volumes:
@@ -215,7 +225,29 @@ services:
     entrypoint: [/bin/bash, -c, "exec sleep infinity"]
     volumes:
       - ../upstream/ethical-hacking-docker-labs:/course:ro
+      - red-findings:/var/lib/soc-ai
     networks: [dmz]
+
+  green:
+    <<: *lab
+    image: paper-vianden/toolbox:local
+    hostname: green
+    user: "65534:65534"
+    entrypoint: [/bin/bash, -c, "exec sleep infinity"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment: {HOME: /tmp}
+    mem_limit: 192m
+    memswap_limit: 192m
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=16m,mode=1777
+    volumes:
+      - ../runtime/green.py:/usr/local/bin/green-work:ro
+      - ../runtime/evidence.py:/opt/workflows/evidence.py:ro
+      - green-journal:/var/log/green-users
+      - green-findings:/var/lib/soc-ai
+    networks: [dmz, internal]
 
   ldap:
     <<: *lab
@@ -354,6 +386,7 @@ volumes:
       o: size=8m,uid=65534,gid=65534,mode=0755,nosuid,nodev,noexec
   story-journal: *journal
   dns-evidence: *journal
+  green-journal: *journal
   soc-evidence:
     driver: local
     driver_opts:
@@ -362,3 +395,6 @@ volumes:
       o: size=16m,mode=0755,nosuid,nodev,noexec
   agent-findings:
     driver: local
+  red-findings:
+    driver: local
+  green-findings: *journal

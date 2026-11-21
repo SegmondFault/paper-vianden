@@ -17,9 +17,13 @@ from tools import install_portals
 class PortalTests(unittest.TestCase):
     def test_roles_are_bound_to_both_uid_and_account(self):
         config = {'accounts': {'agent': {'uid': 1200, 'role': 'blue'},
-                               'observer': {'uid': 1201, 'role': 'white'}}}
+                               'observer':{'uid':1201,'role':'white'},
+                               'attacker':{'uid':1202,'role':'red'},
+                               'users':{'uid':1203,'role':'green'}}}
         self.assertEqual(pv.portal_role(config, 1200, 'agent'), 'blue')
         self.assertEqual(pv.portal_role(config, 1201, 'observer'), 'white')
+        self.assertEqual(pv.portal_role(config,1202,'attacker'),'red')
+        self.assertEqual(pv.portal_role(config,1203,'users'),'green')
         for uid, account in ((1201, 'agent'), (1200, 'observer'), (0, 'root'), (1200, 'missing')):
             with self.assertRaises(RuntimeError):
                 pv.portal_role(config, uid, account)
@@ -56,6 +60,19 @@ class PortalTests(unittest.TestCase):
         self.assertIn('-t', argv)
         with self.assertRaises(KeyError):
             pv.join_argv('unknown', 'paper-vianden-test')
+
+    def test_red_and_green_can_only_join_the_human_selected_modes(self):
+        import time
+        with tempfile.TemporaryDirectory() as tmp, patch.object(pv,'RUNTIME',Path(tmp)),patch.object(pv,'managed_running',return_value=True),patch.object(pv,'join') as join:
+            (Path(tmp)/'demo-lease.json').write_text(json.dumps({'expires':time.time()+600}))
+            active=Path(tmp)/'active.json'
+            active.write_text(json.dumps({'state':'ready','normal_traffic':'scripted','attacker':'scripted'}))
+            for role in ('red','green'):
+                with self.assertRaisesRegex(RuntimeError,'human to select'):pv.portal_connect(role,'hostname')
+            join.assert_not_called()
+            active.write_text(json.dumps({'state':'ready','normal_traffic':'llm','attacker':'llm'}))
+            for role in ('red','green'):pv.portal_connect(role,'hostname')
+            self.assertEqual(join.call_count,2)
 
     def test_ssh_block_scopes_forcing_to_selected_accounts(self):
         block = install_portals.ssh_block({'agent': {}, 'observer': {}})

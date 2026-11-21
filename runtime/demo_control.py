@@ -55,6 +55,8 @@ class Controller:
             if action in ('start', 'reset'):
                 p.add_argument('--seed', type=int, default=42)
                 p.add_argument('--clock-speed', type=float, default=60)
+                p.add_argument('--attacker',choices=('scripted','llm'),default='scripted')
+                p.add_argument('--normal-traffic',choices=('scripted','llm'),default='scripted')
         args = parser.parse_args(argv)
         self.directory.mkdir(mode=0o700, exist_ok=True)
         with (self.directory/'demo-control.lock').open('a') as lock:
@@ -88,9 +90,10 @@ class Controller:
                     self.stop()
                 if lease['expires'] <= time.time()+30:
                     raise RuntimeError('Lease is nearly expired; release it and claim a new slot.')
-                atomic_json(self.directory/'demo-run.json', {'seed': args.seed, 'clock_speed': args.clock_speed})
+                preset={'seed':args.seed,'clock_speed':args.clock_speed,'attacker':args.attacker,'normal_traffic':args.normal_traffic}
+                atomic_json(self.directory/'demo-run.json',preset)
                 self.start()
-                return {'state': 'starting', 'seed': args.seed, 'clock_speed': args.clock_speed}
+                return {'state':'starting',**preset}
             if args.action == 'export':
                 return self.archive()
             if self.running():

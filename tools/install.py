@@ -95,6 +95,7 @@ def main():
         (release/'pv.py').chmod(0o755)
         (release/'runtime/white.py').chmod(0o755)
         (release/'runtime/evidence.py').chmod(0o755)
+        (release/'runtime/green.py').chmod(0o755)
     # Archives preserve the builder's numeric UID when extracted by root.
     # Never carry that identity into a privileged deployed release.
     for base, dirs, files in os.walk(release):

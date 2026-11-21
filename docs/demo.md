@@ -4,6 +4,8 @@ The SOC model and orchestration run outside the range. The supplied SSH adapter
 and acceptance rehearsal are scripted clients; they test the response interface,
 not a model's judgement.
 
+For the ordered blue → red → green walkthrough, start with the [Quickstart](../QUICKSTART.md).
+
 ## Human exercise gate
 
 Use remote SSH commands on the human account:
@@ -101,3 +103,14 @@ from tools.demo_client import SSHClient
 client = SSHClient()
 events = client.json('agent', 'evidence tail --limit 100')
 ```
+
+## External team modes
+
+Only the human lease holder selects `--attacker scripted|llm` and
+`--normal-traffic scripted|llm` on start/reset. Red LLM mode disables the scripted
+malicious actor; green LLM mode disables automatic normal workflows while keeping
+the clock alive. Corresponding role logins are gated by these human choices.
+Red and green have separate workstations, no blue key and no instructor journal.
+Green is UID 65534 and offers `green-work` actions with an observation journal.
+All three roles can save reports under their own `/var/lib/soc-ai`; exports keep
+these separate. LLM-driven red activity is unscored, not labelled a scripted success.

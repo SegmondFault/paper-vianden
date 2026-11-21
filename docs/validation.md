@@ -1,3 +1,12 @@
+# External team modes
+
+The suite now includes 44 unit tests. Human-selected red/green mode gates,
+clock-only normal traffic, and account-role bindings are covered. The original
+native response rehearsal passed all eight ordinary-work checks both before and
+after containment, prevented the simulated objective, downloaded its findings
+archive, and released the human lease. External-role mode checks use scripted
+SSH clients, without running models inside the range.
+
 # Demo ownership and central evidence changes
 
 The expanded suite passes 41 unit tests, covering human reservations/token

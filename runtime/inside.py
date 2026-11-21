@@ -61,7 +61,7 @@ def main():
         run(COMPOSE+['exec', '-T', 'scenario-runner', 'python3',
                      '/opt/paper-vianden/runtime/scenario_runner.py', '--check'])
         Path('/tmp/paper-vianden-ready').write_text('ready\n')
-        print(json.dumps({'event': 'ready', 'services': 27}), flush=True)
+        print(json.dumps({'event':'ready','services':28}),flush=True)
         while daemon.poll() is None:
             time.sleep(1)
         raise RuntimeError('Inner Docker stopped unexpectedly')

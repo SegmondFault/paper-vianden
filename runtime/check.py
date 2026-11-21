@@ -73,7 +73,7 @@ def activity():
     from pathlib import Path
     state = json.loads(Path('/var/log/simulated-users/status.json').read_text())
     assert state['state'] == 'running' and time.time()-state['last_tick'] < 90
-    assert state['mode'] in ('active', 'idle', 'complete')
+    assert state['mode'] in ('active','idle','complete','external')
     assert 0 <= state['scenario_seconds'] <= 86400
     assert 1 <= state['clock_speed'] <= 3600
     # Story health is checked from its container, never via a blue answer-key mount.

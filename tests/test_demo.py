@@ -62,6 +62,24 @@ class DemoTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):c.execute(['stop','--token',a['token']],1200,'human')
                 self.assertNotEqual(a['token'],b['token'])
 
+    def test_human_modes_are_persisted_before_start(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            c=self.controller(tmp);claim=c.execute(['claim','Alice'],1200,'human')
+            c.execute(['start','--token',claim['token'],'--attacker','llm','--normal-traffic','llm'],1200,'human')
+            preset=json.loads((Path(tmp)/'demo-run.json').read_text())
+            self.assertEqual((preset['attacker'],preset['normal_traffic']),('llm','llm'))
+            c.start.assert_called_once()
+
+    def test_green_mode_keeps_clock_but_never_runs_scripted_workflows(self):
+        import activity
+        from datetime import timedelta
+        from scenario import START
+        clock=Mock();clock.now=START+timedelta(hours=1,minutes=30)
+        clock.elapsed=5400;clock.speed=60;clock.seed=42
+        with tempfile.TemporaryDirectory() as tmp, patch.object(activity,'LOG_DIR',Path(tmp)),patch.object(activity,'Clock',return_value=clock),patch.object(activity,'save_status',side_effect=[None,None,StopIteration]),patch.object(activity.time,'sleep'),patch.object(activity.signal,'signal'),patch.object(activity,'perform') as perform,patch.dict(activity.os.environ,{'PV_NORMAL_TRAFFIC':'llm'}),patch.object(sys,'argv',['activity']):
+            with self.assertRaises(StopIteration):activity.main()
+            clock.publish.assert_called_once();perform.assert_not_called()
+
     def test_cursor_pagination_and_gap_detection(self):
         with tempfile.TemporaryDirectory() as tmp:
             feed=Feed(tmp)

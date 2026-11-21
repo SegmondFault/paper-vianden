@@ -1,6 +1,6 @@
 # Service capabilities
 
-The combined configuration has 27 containers. Runtime verification is recorded
+The combined configuration has 28 containers. Runtime verification is recorded
 separately in the [validation record](validation.md).
 
 | Area | Services / tools |

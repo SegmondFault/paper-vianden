@@ -30,7 +30,8 @@ SOURCES = {
     'mail.internal': ['/var/log/auth.log', '/var/log/mail.log'],
 }
 LOCAL = {'dns': Path('/var/log/dns/queries.jsonl'),
-         'employees': Path('/var/log/simulated-users/activity.jsonl')}
+         'employees':Path('/var/log/simulated-users/activity.jsonl'),
+         'green':Path('/var/log/green-users/activity.jsonl')}
 
 # Fixed file roots, bounded reads, no pipes/device files/symlink traversal.
 READ_FILES = '''import glob,json,os,stat
@@ -172,7 +173,7 @@ class Feed:
             return self.status()
 
 
-def availability():
+def availability(only=None):
     """Real ordinary-work probes; no instructor journal or scenario imports."""
     import ftplib, imaplib, smtplib
     def web(): urllib.request.urlopen('http://web-01.dmz/', timeout=4).read(4096)
@@ -198,6 +199,7 @@ def availability():
         with ftplib.FTP('ftp.dmz',timeout=4) as client: client.login(); assert client.nlst()
     result={}
     for name,action in (('web',web),('api',api),('files',files),('directory',directory),('report',report),('ssh',ssh),('mail',mail),('ftp',ftp)):
+        if only is not None and name!=only:continue
         try: action(); result[name]={'ok':True}
         except Exception as error: result[name]={'ok':False,'error':type(error).__name__}
     return {'time':timestamp(),'checks':result,'ok':all(x['ok'] for x in result.values())}

@@ -1,6 +1,6 @@
 # SSH access and exercise ownership
 
-Distinct human and agent Unix accounts are bound by UID/name to white or blue.
+Distinct human, blue, red and green Unix accounts are bound by UID/name to their fixed workstation.
 Clients cannot select roles, forward ports, transfer host files via SFTP, or
 execute arbitrary host processes. Commands are single arguments to `bash -lc`
 inside the workstation. Models and SOC orchestration run elsewhere.
@@ -38,7 +38,8 @@ preserves them and rejects privileged or Docker-group accounts.
 
 ```sh
 sudo python3 /opt/paper-vianden/current/tools/install_portals.py \
-  --blue-account agent --white-account human \
+  --blue-account blue-agent --white-account human \
+  --red-account red-agent --green-account green-agent \
   --seed 42 --clock-speed 60 --lease-hours 26 --max-sessions 16 --configure-ssh
 ```
 

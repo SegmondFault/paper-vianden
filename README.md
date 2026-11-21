@@ -2,9 +2,13 @@
 
 An on-demand, disposable network for attack and defence testing.
 
-One Sysbox system container runs 27 service and workstation containers across
+One Sysbox system container runs 28 service and workstation containers across
 management, DMZ and internal networks. Python owns the lifecycle; Docker Compose
 describes services. 
+
+**Start with the [Quickstart](QUICKSTART.md): blue + scripted scenario, then red LLM, then green LLM.**
+
+[Environment diagram and network membership](docs/environment.md).
 
 ## SSH access
 
@@ -66,7 +70,7 @@ remains available for development.
 ## Development
 
 See the [public development notes and TODOs](docs/development-notes.md), including
-planned red/green agent portals and a flat scenario.
+the remaining flat-scenario work. Red and green portals are available.
 
 ## Licence
 

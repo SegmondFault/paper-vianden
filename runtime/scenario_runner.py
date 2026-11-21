@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import logging
+import os
 from logging.handlers import RotatingFileHandler
 import signal
 import sys
@@ -16,7 +17,7 @@ STATUS = STORY_DIR/'story-status.json'
 
 def check_status(path=STATUS):
     state = json.loads(path.read_text())
-    if state['state'] not in ('running', 'complete') or time.time()-state['last_tick'] > 90:
+    if state['state'] not in ('running','complete','external') or time.time()-state['last_tick'] > 90:
         raise RuntimeError('Story runner is not healthy')
     return state
 
@@ -58,6 +59,13 @@ def run(clock, story, logger, status=STATUS):
         time.sleep(15 if done else max(.05, min(2, 15/clock.speed)))
 
 
+def external_status(clock):
+    return {'state':'external','phase':'red-llm','last_tick':time.time(),
+            'scenario_seconds':clock.elapsed,'scenario_time':clock.now.isoformat(),
+            'clock_speed':clock.speed,'events_processed':0,'events_total':0,
+            'objective':'unscored','results':{},'simulated':True}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--check', action='store_true')
@@ -81,7 +89,10 @@ def main():
             time.sleep(.5)
     else:
         raise RuntimeError('Employee scheduler did not publish the scenario clock')
-    run(clock, Story(clock.seed), logger)
+    if os.environ.get('PV_ATTACKER_MODE','scripted')=='llm':
+        while True:
+            save_json(STATUS,external_status(clock));time.sleep(2)
+    else:run(clock, Story(clock.seed), logger)
 
 
 if __name__ == '__main__':
