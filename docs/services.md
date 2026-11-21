@@ -19,6 +19,9 @@ separately in the [validation record](validation.md).
 | Access simulation | HTTP badge-reader simulator |
 | Analysis | tcpdump, headless tshark, Hydra, John, Hashcat, sqlmap |
 
+Hashcat is installed without a GPU or OpenCL compute backend. Use John for
+CPU-only exercises, or add a compatible backend in a derived image.
+
 Captured mail never delivers externally. OpenLDAP is not Windows Active
 Directory. There is no wireless hardware, industrial process, desktop Wireshark
 GUI or model runtime. Host ASLR remains enabled; the teaching binary is non-PIE.
