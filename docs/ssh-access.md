@@ -23,6 +23,13 @@ ssh agent@range.example 'hostname; id; ip -brief address'
 The command is passed as one argument to `bash -lc` **inside blue**, never to a
 privileged host shell. Interactive SSH should request a PTY (`ssh -t` or the
 client library's equivalent). Noninteractive commands also work without a PTY.
+Each account permits **one active workstation session**, enforced across SSH
+connections by a UID-bound lock as well as a per-connection channel limit. A
+second concurrent login is rejected; after disconnect, the slot is released.
+Blue and white use different accounts and can connect simultaneously. Agent
+architectures must serialize SSH tool calls. An authenticated SSH transport with
+no open workstation channel does not hold a slot.
+
 SSH forwarding is disabled. The portal cannot select another role or start an
 arbitrary host process. SFTP commands, if requested, cannot provide a host-file
 transfer channel; export evidence through workstation stdout instead.
@@ -67,7 +74,8 @@ administrator and does not accelerate network operations or the lease timer.
 
 **Current limits:** one shared run, not isolated simultaneous experiments; no
 per-user leases, idle timeout, lease renewal, or participant reset endpoint.
-All portal users of a role share that workstation. A new login after lease
+All portal users of a role share that workstation, but a single account cannot
+have concurrent workstation sessions. A new login after lease
 expiry starts a fresh run using the configured seed/speed. Separate SSH accounts
 provide role/access separation, not separate training networks. Containers share
 a kernel; this is not a hardened multi-tenant service.

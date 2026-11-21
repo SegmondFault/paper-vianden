@@ -37,6 +37,7 @@ Match User {names}
     ForceCommand {WRAPPER}
     DisableForwarding yes
     PermitTTY yes
+    MaxSessions 1
     PermitUserRC no
     PasswordAuthentication yes
     KbdInteractiveAuthentication no

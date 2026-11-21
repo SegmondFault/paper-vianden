@@ -27,6 +27,22 @@ class PortalTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             pv.portal_role(config, 1200, 'agent')
 
+    def test_one_workstation_session_per_uid_and_release_on_disconnect(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(pv, 'RUNTIME', Path(tmp)):
+            with pv.portal_login_lock(1200):
+                with self.assertRaisesRegex(RuntimeError, 'already has a workstation session'):
+                    with pv.portal_login_lock(1200):
+                        self.fail('Duplicate login was allowed')
+                with pv.portal_login_lock(1201):
+                    pass  # A white account can observe while blue is connected.
+            with pv.portal_login_lock(1200):
+                pass  # Reconnect after the previous session ended.
+            with self.assertRaises(ValueError):
+                with pv.portal_login_lock(1200):
+                    raise ValueError('Session failed')
+            with pv.portal_login_lock(1200):
+                pass  # Exceptions release the account slot too.
+
     def test_exec_is_one_argument_inside_blue_not_host_shell(self):
         payload = "echo ok; whoami; printf '%s' '--role control'"
         argv = pv.join_argv('blue', 'paper-vianden-test', payload, tty=False)
@@ -48,6 +64,7 @@ class PortalTests(unittest.TestCase):
         self.assertIn('Match User agent,observer', block)
         self.assertIn('DisableForwarding yes', block)
         self.assertIn('PermitUserRC no', block)
+        self.assertIn('MaxSessions 1', block)
         self.assertIn('ForceCommand /usr/local/libexec/paper-vianden-ssh', block)
         self.assertNotIn('Match all', block)
         for name in ('root\nForceCommand evil', '../root', 'a,b', 'x y'):

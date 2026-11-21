@@ -112,6 +112,17 @@ def portal_role(config, uid, username):
     return record['role']
 
 
+@contextlib.contextmanager
+def portal_login_lock(uid):
+    RUNTIME.mkdir(mode=0o700, exist_ok=True)
+    with (RUNTIME/('portal-login-'+str(uid)+'.lock')).open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError('This account already has a workstation session; disconnect it before connecting again.')
+        yield
+
+
 def portal(execute=None):
     trusted_install()
     for path in (PORTAL_CONFIG.parent, PORTAL_CONFIG):
@@ -122,6 +133,11 @@ def portal(execute=None):
     if uid <= 0:
         raise RuntimeError('Portal requires an authenticated sudo caller')
     role = portal_role(json.loads(PORTAL_CONFIG.read_text()), uid, pwd.getpwuid(uid).pw_name)
+    with portal_login_lock(uid):
+        portal_connect(role, execute)
+
+
+def portal_connect(role, execute=None):
     RUNTIME.mkdir(mode=0o700, exist_ok=True)
     with (RUNTIME/'portal-start.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
