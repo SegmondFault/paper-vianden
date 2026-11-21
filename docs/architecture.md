@@ -14,7 +14,7 @@ SSH operator (no Docker group; fixed sudo commands)
 ```
 
 An optional root-configured SSH portal maps authenticated Unix UID/account pairs
-to blue or white, never a client-selected role. A custom forced login shell
+to blue, white, red or green, never a client-selected role. A custom forced login shell
 prevents host-shell startup files and sends commands as one argument into the
 selected workstation. A human-owned lease starts a bounded-lifetime owner service,
 which holds a private PTY independently of SSH connections. White mounts journals
@@ -24,8 +24,7 @@ read-only, has no Docker socket/admin key, and joins management only. See
 Host Docker is separate and never restarted or reconfigured. The dedicated
 daemon has no bridge, firewall management, forwarding or masquerading. Its only
 container has network=none. Inner bridges and rules belong to that container's
-network namespace. No target port is published on the host. The only host bind
-in the envelope is the read-only target image archive.
+network namespace. No target port is published on the host. The host binds in the envelope are read-only target image archives.
 
 ## Lifecycle
 
@@ -79,3 +78,11 @@ Startup runs readiness checks first, wipes live role journals/findings/histories
 and target evidence, then starts the collector and traffic actors. Journal files
 with active sink writers are truncated in place so fresh DNS/HTTP events remain
 visible. Saved archives and host operational logs are outside that cleanup.
+
+The inner owner generates a corporate network overlay with an asset inventory,
+management-only blue/telemetry and a stateful firewall between zones. A guarded
+Suricata container shares only the inner namespace for passive bridge capture.
+The token-protected collector supplies the minimal analyst workspace, stores case
+snapshots and handovers in its evidence volume, and proxies bounded containment
+requests to the inner owner. Workload roles cannot reach management. See
+[the topology](environment.md) and [coverage](security.md).

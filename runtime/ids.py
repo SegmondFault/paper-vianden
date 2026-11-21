@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import socket
 import subprocess
 import time
 
@@ -32,7 +33,8 @@ def main():
     settings = json.loads(Path('/run/corporate/ids.json').read_text())
     if os.readlink('/proc/self/ns/net') != settings['namespace']:
         raise SystemExit('Refusing IDS capture outside the prepared private range namespace')
-    if not all(Path('/sys/class/net', name).is_dir() and name.startswith('br-') for name in settings['interfaces']):
+    interfaces={name for _,name in socket.if_nameindex()}
+    if not all(name in interfaces and name.startswith('br-') for name in settings['interfaces']):
         raise SystemExit('Missing private range bridges')
     config = configuration(settings)
     # JSON is a YAML subset understood by libyaml; include the Suricata YAML header.

@@ -20,6 +20,7 @@ def main():
         for _ in range(150):
             state=client.json('human','range status')
             if state['phase']=='ready':return
+            if state['phase']=='stopped': raise RuntimeError('Range startup stopped; inspect the owner journal')
             time.sleep(3)
         raise RuntimeError('Range did not become ready')
     def py(role,source):return client.run(role,'python3 -c '+shlex.quote(source)).stdout

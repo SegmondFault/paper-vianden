@@ -28,7 +28,7 @@ class Workspace:
         self.state = json.loads(path.read_text()) if path.exists() else {
             'run': uuid.uuid4().hex, 'alerts': [], 'cases': [], 'audit': []}
         self.failures = defaultdict(lambda: deque(maxlen=5))
-        self.dedup = set()
+        self.saturated = False
         self.save()
 
     def save(self):
@@ -59,18 +59,20 @@ class Workspace:
         if rule is None: return
         # One inbox item per rule and host per run; further occurrences update it.
         with self.lock:
+            previous=copy.deepcopy(self.state['alerts'])
             existing = next((x for x in self.state['alerts'] if x['rule'] == rule and x['host'] == event['host']), None)
             if existing:
                 existing['count'] += 1; existing['last_seen'] = event['observed_at']
             else:
-                if len(self.state['alerts']) >= 100: return
+                if len(self.state['alerts']) >= 100:
+                    self.saturated=True; return
                 self.state['alerts'].append({'id': 'A'+uuid.uuid4().hex[:10], 'rule': rule,
                     'title': title[:300], 'host': event['host'], 'severity': severity,
                     'status': 'open', 'count': 1, 'first_seen': event['observed_at'],
                     'last_seen': event['observed_at'], 'evidence': event})
             try: self.save()
             except ValueError:
-                self.state['alerts'].pop()
+                self.state['alerts']=previous; self.saturated=True
 
     def get_case(self, ident):
         for case in self.state['cases']:

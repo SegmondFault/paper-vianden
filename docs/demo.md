@@ -37,16 +37,22 @@ evidence tail --limit 200
 evidence tail --after RUN_ID:SEQUENCE --limit 200
 evidence tail --follow
 evidence availability
-curl -fsS 'http://telemetry.management:8088/events?limit=200'
+curl -fsS -H "Authorization: Bearer $(cat /run/analyst/token)" 'http://telemetry.management:8088/events?limit=200'
+analyst inbox
+analyst logs --query "Failed password"
+analyst cases
 ```
 
 The collector gathers authentication, web/API, Samba, FTP/mail, SQL, mixed raw
-DNS and employee observations. Events have IDs, observation timestamps, host,
+DNS, employee observations and Suricata network metadata/alerts. Events have IDs, observation timestamps, host,
 source and original message; structured inputs retain their fields/timestamps.
 No private story journal is collected. Polls run about every two seconds plus
 source latency; sensor errors appear in `evidence status`. Cursor responses
 expose restarts (`reset`) and retention gaps (`gap`). Handle both when ingesting.
-The feed is a demonstration collector, not a SIEM or whole-network packet mirror.
+The collector supplies a small set of SIEM functions. It is not a full SIEM
+distribution or whole-network packet mirror. The [coverage guide](security.md)
+describes its rules, retention and limits. The [Quickstart](../QUICKSTART.md)
+walks through case notes, version checks, handovers and reversible containment.
 
 Save findings, actions and selected evidence under `/var/lib/soc-ai`. It survives
 SSH disconnects and is included in exports. Humans separately use `observe status`

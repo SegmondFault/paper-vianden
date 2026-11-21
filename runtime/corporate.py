@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import socket
 import subprocess
 import threading
 
@@ -33,7 +34,7 @@ def command(*args, **kwargs):
 def guard():
     # Sysbox's outer container has network=none: loopback and our inner bridges,
     # no physical interfaces and no external default route. Refuse host use.
-    interfaces = {p.name for p in Path('/sys/class/net').iterdir()}
+    interfaces = {name for _,name in socket.if_nameindex()}
     if any(not (name=='lo' or name=='docker0' or name.startswith(('br-','veth'))) for name in interfaces):
         raise RuntimeError('Corporate controls require the private network-none range namespace')
     if command('ip','-4','route','show','default').strip():

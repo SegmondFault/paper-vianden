@@ -9,3 +9,5 @@ artifacts
 .env
 .env.*
 .DS_Store
+
+prototype/corporate.generated.yaml

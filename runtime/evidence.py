@@ -146,6 +146,7 @@ class Feed:
         with self.lock:
             return {'epoch': self.epoch, 'events': self.sequence, 'retained': len(self.events),
                     'last_poll': self.last_poll, 'errors': self.errors.copy(),
+                    'workspace_saturated':self.workspace.saturated,
                     'sources': sorted(SOURCES)+['db-01.internal', 'dns', 'employees']}
 
     def records(self, host, records):
@@ -270,8 +271,9 @@ def handler(feed):
                     req=urllib.request.Request(config['url'], data=json.dumps(data).encode(),
                         headers={'Authorization':'Bearer '+config['token']})
                     with urllib.request.urlopen(req,timeout=10) as response: result=json.load(response)
-                    with feed.workspace.lock:
-                        feed.workspace.audit('firewall',result); feed.workspace.save()
+                    if data.get('action')!='status':
+                        with feed.workspace.lock:
+                            feed.workspace.audit('firewall',result); feed.workspace.save()
                 else:
                     # Always acquire feed before workspace to keep lock order consistent.
                     with feed.lock: result=feed.workspace.mutate(action,data,list(feed.events))

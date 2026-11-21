@@ -2,7 +2,7 @@
 
 An on-demand, disposable network for attack and defence testing.
 
-One Sysbox system container runs 28 service and workstation containers across
+One Sysbox system container runs 29 service and workstation containers across
 management, DMZ and internal networks. Python owns the lifecycle; Docker Compose
 describes services. 
 
@@ -81,3 +81,8 @@ licences. Attribution and pins are in [notices](THIRD_PARTY_NOTICES.md) and
 ```sh
 git clone --recurse-submodules https://github.com/SegmondFault/paper-vianden.git
 ```
+
+The [analyst workspace and security coverage](docs/security.md) provide an alert
+inbox, searchable logs, cases and handovers, plus a segmented DMZ/LAN and passive
+Suricata IDS. See the [roadmap](docs/development-notes.md) for optional flags and
+deeper validation planned as stretch goals.
