@@ -72,7 +72,7 @@ def prepare(compose):
     lines += ['  ids:', '    image: paper-vianden/ids:local',
         '    platform: linux/amd64', '    init: true', '    restart: "no"',
         '    network_mode: host', '    entrypoint: [python3, /opt/ids/ids.py]',
-        '    read_only: true', '    cap_drop: [ALL]', '    cap_add: [NET_RAW, NET_ADMIN]',
+        '    read_only: true', '    cap_drop: [ALL]', '    cap_add: [NET_RAW, NET_ADMIN, DAC_READ_SEARCH]',
         '    security_opt: [no-new-privileges:true]', '    mem_limit: 384m', '    memswap_limit: 384m',
         '    cpus: 0.5', '    pids_limit: 64', '    tmpfs: ["/tmp:rw,nosuid,nodev,size=16m"]',
         '    volumes:', '      - /run/corporate:/run/corporate:ro',
