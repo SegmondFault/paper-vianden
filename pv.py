@@ -114,7 +114,7 @@ def session(args):
                 'run', '--role', args.role]
         if args.check:
             argv.append('--check')
-        properties = ['--property=Delegate=yes', '--property=KillMode=control-group',
+        properties = ['--property=Delegate=yes', '--property=KillMode=mixed',
                       '--property=MemoryHigh=5G', '--property=MemoryMax=7G',
                       '--property=MemorySwapMax=0',
                       '--property=CPUQuota=400%', '--property=TasksMax=4096',
@@ -259,7 +259,7 @@ def run_session(args):
             join(args.role, name)
     except BaseException as error:
         failure = error
-        if mounted:
+        if mounted and not isinstance(error, KeyboardInterrupt):
             for log in MOUNT.glob('*.log'):
                 print('\n'+log.name+':\n'+log.read_text(errors='replace')[-3500:], file=sys.stderr)
         raise
