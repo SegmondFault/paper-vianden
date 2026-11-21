@@ -62,6 +62,11 @@ and [validation record](docs/validation.md). Native amd64 protocol, reset and
 cleanup checks pass. A separately tested [local prototype](docs/prototype.md)
 remains available for development.
 
+## Development
+
+See the [public development notes and TODOs](docs/development-notes.md), including
+planned red/green agent portals and a flat scenario.
+
 ## Licence
 
 Original code and documentation use [MIT](LICENSE). Dependencies retain their
