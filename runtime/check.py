@@ -5,6 +5,7 @@ import poplib
 import smtplib
 import socket
 import subprocess
+import sys
 import time
 import urllib.request
 
@@ -67,6 +68,17 @@ def bof():
         assert b'SECRET MENU' in until(b'Access granted.')
 
 
+def activity():
+    import json
+    from pathlib import Path
+    state = json.loads(Path('/var/log/simulated-users/status.json').read_text())
+    assert state['state'] == 'running' and time.time()-state['last_tick'] < 90
+    assert state['mode'] in ('active', 'idle', 'complete')
+    assert 0 <= state['scenario_seconds'] <= 86400
+    assert 1 <= state['clock_speed'] <= 3600
+    # Story health is checked from its container, never via a blue answer-key mount.
+
+
 checks = [
     ('portal', lambda: http('http://web-01.dmz/')),
     ('SSH gateway', lambda: cli('ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', 'vpn-gw-01.internal', 'hostname')),
@@ -90,6 +102,10 @@ checks = [
     ('32-bit teaching server', bof),
     ('packet analysis and password tools', lambda: cli('sh', '-c', 'command -v tshark john hydra hashcat gdb nmap')),
 ]
+if '--activity-only' in sys.argv:
+    checks = [('simulated user traffic', activity)]
+elif '--activity' in sys.argv:
+    checks.append(('simulated user traffic', activity))
 for label, check in checks:
     for attempt in range(30):
         try:

@@ -2,7 +2,7 @@
 
 An on-demand, disposable network for attack and defence testing.
 
-One Sysbox system container runs 22 service and workstation containers across
+One Sysbox system container runs 25 service and workstation containers across
 management, DMZ and internal networks. Python owns the lifecycle; Docker Compose
 describes services. 
 
@@ -25,7 +25,13 @@ the protocols and destroys it.
 
 SSH, HTTP/PHP, SQL, SMB, Redis, LDAP, SNMP, FTP, captured SMTP, IMAP, POP3,
 vulnerable web applications, a badge-reader simulator, a 32-bit teaching server
-and packet/password/debugging tools. Fixtures and passwords are synthetic.
+and packet/password/debugging tools. Lightweight synthetic users and an inert
+24-hour intrusion storyline (simulated foothold, discovery, fixture-account
+movement, staging and DNS transfer) start and stop with the range. Use
+`./start-range --seed 42 --clock-speed 60` for a reproducible 24-minute variant;
+change the seed for different workflow mixes and timing. DNS timing is jittered,
+and blue receives raw evidence rather than storyline answer journals.
+Fixtures and passwords are synthetic.
 See [services](docs/services.md) and the [user guide](docs/users.md).
 
 ## Installation and boundaries

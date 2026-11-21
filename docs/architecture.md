@@ -48,5 +48,18 @@ require explicit administrator installation.
 
 Sysbox shares the host kernel; it is not a hardware VM. Role consoles are
 administrative within the lab and do not provide separate tenant isolation.
-There is no model runtime, scoring service, traffic generator or automatic
+Synthetic-user traffic and an inert 24-hour storyline run as independent,
+unprivileged range-local services sharing a monotonic scenario clock and master
+variant seed, with independent PRNG streams for each planned behaviour. The story
+runner is DMZ-only; internal discovery and lateral SSH traverse the gateway via
+fixed-destination SSH channels. Synthetic DNS chunks originate on the file host.
+Story milestones gate later actions; failures are recorded, never bypassed.
+Foothold/credential acquisition are inert markers; privilege escalation is an
+account-context simulation, not exploitation. Three bounded tmpfs journal volumes
+separate employee activity, private instructor truth, and raw DNS evidence. Blue
+receives only employee activity and mixed raw DNS logs, not story source or
+answer journals. Office DNS resolves a fixed Docker-alias allowlist; transfer
+slots have seeded phase jitter around a recoverable carrier. Unknown queries
+are never forwarded. No ports are published for the DNS sink or
+banner emulators. There is no model runtime, scoring service or automatic
 evidence retention.

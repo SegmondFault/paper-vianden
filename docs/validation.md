@@ -1,5 +1,50 @@
 # Validation record
 
+## Synthetic activity layer
+
+`python3 -m unittest discover -s tests -v` passes 24 tests, including clock
+sharing/bounds, independent seeded variants, smooth office modulation, jittered
+slot bounds/ordering, cadence recovery from observed-style timestamps, accelerated
+completion without duplicate events, dependency blocking, a failed chunk
+preventing objective completion, staged-data tampering/symlink rejection,
+allowlisted office DNS, and live loopback DNS/HTTP/SSH-banner/marker exchanges. These also pass inside the toolbox image,
+as UID 65534 with no external network, a read-only root filesystem and dropped
+capabilities. Python compilation, launcher shell syntax and merged Compose
+validation pass.
+
+`python3 tests/smoke_simulation.py --allow-rosetta` completed an isolated Docker
+rehearsal using prepared images, with no builds or pulls:
+
+- Variant seed 42 completed all 47 storyline events, with zero errors or blocked stages.
+- All 32 DNS chunks originated from the file host's actual container IP.
+- Real gateway/file-host password authentication appeared in target SSH logs.
+- The synthetic SQL query appeared in MariaDB's general log.
+- The actual blue workstation had no story source, objective journal or private
+  instructor volume mounted. It received mixed raw office/transfer DNS evidence
+  without phase, marker or scheduled-offset fields.
+- Six of eight employee protocol diagnostics passed. FTP and IMAP failed with
+  verified Rosetta runtime errors on the ARM64 Mac; SMTP delivery occurs before
+  the IMAP failure. These are not reported as passing checks.
+- The test's containers, networks and journal volume were removed and checked
+  absent after teardown. Unrelated containers remained running.
+
+The timing unit tests estimate a 671-second period from the default seed's
+jittered samples, close to the 675-second carrier, without reading scheduled
+fields or the seed. This is not a false-positive/significance assessment or proof
+of live timing fidelity at high acceleration; the fast smoke test validates
+connectivity and completion, not spectral recovery from its catch-up bursts.
+
+The smoke script is strict by default: use `python3 tests/smoke_simulation.py`
+on native Linux AMD64 to require all eight employee diagnostics. Its optional
+`--allow-rosetta` mode tolerates only mail/FTP failures with observed Rosetta
+errors, and reports them explicitly. LDAP bootstrap is awaited before the clock
+starts. Full rebuilt-envelope lifecycle and native FTP/IMAP validation remain
+outstanding; this rehearsal uses the actual service containers directly.
+
+Rebuild the offline bundle and explicitly reinstall to deploy the new runtime,
+launcher and sudo permissions; existing installed releases do not auto-update.
+
+
 The local prototype was evaluated using Docker Desktop's Linux ARM64 engine. All nine
 containers became healthy; management SSH and portal/SMB/SQL/webmail/API/admin/
 Redis checks passed. Reset removed writable-layer and database-volume markers

@@ -48,7 +48,101 @@ services:
     memswap_limit: 512m
     volumes:
       - ../upstream/ethical-hacking-docker-labs:/course:ro
+      # Protocol checks only; no scenario source or instructor answer journal.
+      - ../runtime/check.py:/opt/paper-vianden/runtime/check.py:ro
+      - ../runtime/initialise.py:/opt/paper-vianden/runtime/initialise.py:ro
+      - activity-journal:/var/log/simulated-users:ro
+      - dns-evidence:/var/log/dns:ro
+
+  activity:
+    <<: *lab
+    image: paper-vianden/toolbox:local
+    hostname: users-01
+    user: "65534:65534"
+    entrypoint: [python3, -u, /opt/paper-vianden/runtime/activity.py]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 0.15
+    mem_limit: 96m
+    memswap_limit: 96m
+    pids_limit: 48
+    environment:
+      HOME: /tmp
+      PV_CLOCK_SPEED: ${PV_CLOCK_SPEED:-1}
+      PV_SEED: ${PV_SEED:-20260112}
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=8m,mode=1777
+    volumes:
       - ../runtime:/opt/paper-vianden/runtime:ro
+      - activity-journal:/var/log/simulated-users
+    networks: [dmz, internal]
+    healthcheck:
+      test: [CMD, python3, /opt/paper-vianden/runtime/activity.py, --check]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: 1m, max-file: "2"}
+
+  scenario-runner:
+    <<: *lab
+    image: paper-vianden/toolbox:local
+    hostname: attacker-01
+    user: "65534:65534"
+    entrypoint: [python3, -u, /opt/paper-vianden/runtime/scenario_runner.py]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 96m
+    memswap_limit: 96m
+    pids_limit: 48
+    environment: {HOME: /tmp}
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=8m,mode=1777
+    volumes:
+      - ../runtime:/opt/paper-vianden/runtime:ro
+      - activity-journal:/var/log/simulated-users:ro
+      - story-journal:/var/log/range-instructor
+    # Discovery and lateral traffic must traverse the gateway, not this actor.
+    networks:
+      dmz: {aliases: [attacker-01.dmz]}
+    healthcheck:
+      test: [CMD, python3, /opt/paper-vianden/runtime/scenario_runner.py, --check]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: 1m, max-file: "2"}
+
+  scenario-sink:
+    <<: *lab
+    image: paper-vianden/toolbox:local
+    hostname: scenario-sink
+    user: "65534:65534"
+    entrypoint: [python3, -u, /opt/paper-vianden/runtime/scenario_sink.py]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment: {HOME: /tmp}
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=4m,mode=1777
+    volumes:
+      - ../runtime:/opt/paper-vianden/runtime:ro
+      - story-journal:/var/log/range-instructor
+      - dns-evidence:/var/log/dns
+    networks:
+      dmz: {aliases: [scenario-sink.dmz]}
+      internal: {aliases: [scenario-sink.internal]}
+    healthcheck:
+      test: [CMD, python3, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/status', timeout=2).read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 18
 
   red:
     <<: *lab
@@ -187,3 +281,13 @@ services:
     mem_limit: 32m
     memswap_limit: 32m
     networks: [dmz]
+
+volumes:
+  activity-journal: &journal
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=8m,uid=65534,gid=65534,mode=0755,nosuid,nodev,noexec
+  story-journal: *journal
+  dns-evidence: *journal

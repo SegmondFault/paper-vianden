@@ -64,6 +64,19 @@ Only one session is allowed. Joining cannot start it. The control console
 manages inner containers without exposing the host socket. Users must export
 needed evidence explicitly before stopping.
 
+## Current access/lifecycle limits
+
+The implemented launcher still uses one shared foreground-owned session. The
+owner must remain connected; leaving that shell destroys the range. The installed
+operator account can start/stop the range and enter the administrative control
+console. It is not a join-only participant role.
+
+Self-service session leases, automatic idle/lease expiry, per-run ownership and
+a read-only observer interface are planned, not implemented. The existing
+`--control` console is administrative, not an observer role. Keep instructor truth
+and control access away from black-box agent evaluations; see the
+[instructor notes](scenario-instructors.md).
+
 ## Update from Git
 
 Keep the ordinary checkout tracking origin/main separate from the root release:

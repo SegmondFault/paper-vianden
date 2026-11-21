@@ -92,7 +92,60 @@ its SMTP sender to use mail-sink.dmz:1025; mail stays in the captured inbox.
 
 The blue key reaches the prototype Linux targets and custom FTP, mail, badge
 and binary targets over SSH. Use control for other containers. Captures see the
-interface on which you capture; there is no central mirror or user-traffic generator.
+interface on which you capture; there is no central mirror. The disposable
+runtime includes a lightweight [synthetic user scenario](#simulated-users-and-storyline).
+
+## Simulated users and storyline
+
+```sh
+./start-range --seed 42 --clock-speed 60 # reproducible 24-minute exercise variant
+./start-range --seed 43 --clock-speed 60 # different behavioural variant
+./start-range --clock-speed 3600        # fastest clock; protocol work can take minutes
+```
+
+Default speed is 1 (24 real hours); accepted multipliers are 1–3600. The clock
+starts after service checks, at a fixed synthetic Monday 09:00 Luxembourg time,
+independent of the host's date. Startup/seeding time is not accelerated. Requests
+still use real network timeouts, so slow/broken targets can delay a fast rehearsal.
+`--seed` accepts 0–4294967295 (default 20260112). It modulates workflow choices,
+pauses, intensity and story timing through independent deterministic RNG streams.
+Same seed/configuration replays planned variation; real latency and defender
+changes mean captures will not be byte-for-byte identical. Different seeds are
+behavioural versions of the same story, not different attack storylines.
+
+`users-01` runs low-rate, jittered office workflows: portal/API browsing, SMB
+reads, LDAP lookups, SQL reports, SSH `id -un`, captured mail and anonymous FTP.
+Activity ramps with office hours, pauses for lunch and stops overnight. These
+are protocol requests, not desktop/browser automation or separate employee VMs.
+
+The independent, range-local storyline provides multiple investigation points
+across authentication, discovery, account use, lateral access, staging and DNS.
+Access uses public fixture accounts; exploitation/privilege escalation are
+emulated, not malicious payloads or a real root compromise. All data is synthetic.
+DNS timing is jittered around an underlying cadence rather than clockwork gaps;
+other evidence remains detectable too. Use modest acceleration for timing work,
+since real network latency and catch-up bursts can distort very fast rehearsals.
+
+Inside the blue workstation:
+
+```sh
+cat /var/log/simulated-users/status.json
+tail -n 20 /var/log/simulated-users/activity.jsonl
+tail -n 20 /var/log/dns/queries.jsonl
+```
+
+The raw DNS journal mixes office lookups with other range-local DNS activity;
+it contains timestamps, source IPs and query names, not attack labels or alerts.
+Correlate it with actual target authentication/application/database logs, target
+artifacts and packet captures. Capture on the relevant host/interface: there is
+no whole-network traffic mirror, central alert feed, SOC dashboard or scoring.
+
+The blue workstation deliberately has no mounted story source, schedule or
+answer journal. [Instructor notes](scenario-instructors.md) contain spoilers;
+keep those and control access out of black-box LLM evaluations. This avoids
+accidental answer-key exposure, not a separate tenant security boundary.
+Health checks do not require all workflows to succeed: defender actions can
+legitimately break them. All journals and processes disappear at teardown.
 
 ## Data and troubleshooting
 

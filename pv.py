@@ -43,6 +43,17 @@ def capture(args):
     return command(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.strip()
 
 
+def unit_loaded():
+    return capture(['/usr/bin/systemctl', 'show', '--property=LoadState', '--value',
+                    'paper-vianden-session.service']) != 'not-found'
+
+
+def save_session(info):
+    pending = RUNTIME/'active.tmp'
+    pending.write_text(json.dumps(info)+'\n')
+    pending.replace(RUNTIME/'active.json')
+
+
 def wait_for(test, processes, seconds=90):
     deadline = time.monotonic()+seconds
     while time.monotonic() < deadline:
@@ -88,6 +99,9 @@ def join(role, name=None):
         if not (RUNTIME/'active.json').exists():
             raise RuntimeError('The range is starting; wait for the owner to report readiness.')
         active = json.loads((RUNTIME/'active.json').read_text())
+        if active.get('state') != 'ready':
+            raise RuntimeError('The shared range is '+active.get('state', 'starting')+
+                               '; wait for the owner before joining.')
         name = active['name']
         if not name.startswith('paper-vianden-') or not name.removeprefix('paper-vianden-').isalnum():
             raise RuntimeError('Invalid session identity')
@@ -108,10 +122,15 @@ def session(args):
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise RuntimeError('A range session is already active.')
+            raise RuntimeError('A shared range is already active. Use join-range to join it.')
+        if unit_loaded():
+            raise RuntimeError('The shared range is starting, running or stopping. '
+                               'Join it when ready, or wait until range-status says Stopped.')
+        # A killed owner can leave bookkeeping, but cannot create a second unit.
+        (RUNTIME/'active.json').unlink(missing_ok=True)
         argv = ['/usr/bin/unshare', '--mount', '--propagation', 'private', '--',
                 '/usr/bin/python3', '-I', str(ROOT/'pv.py'), '_session',
-                'run', '--role', args.role]
+                'run', '--role', args.role, '--clock-speed', str(args.clock_speed), '--seed', str(args.seed)]
         if args.check:
             argv.append('--check')
         properties = ['--property=Delegate=yes', '--property=KillMode=mixed',
@@ -161,7 +180,10 @@ def run_session(args):
     failure = None
     container_created = False
     follower = None
+    session_info = {'name': name, 'pid': os.getpid(),
+                    'source': manifest.get('source_revision'), 'state': 'starting'}
     try:
+        save_session(session_info)
         group = next(line.split('::', 1)[1].strip() for line in
                      Path('/proc/self/cgroup').read_text().splitlines() if line.startswith('0::'))
         parent = Path('/sys/fs/cgroup')/group.lstrip('/')
@@ -234,14 +256,14 @@ def run_session(args):
         command(DOCKER+['create', '--name', name, '--runtime=sysbox-runc', '--network=none',
                         '--memory=6g', '--memory-swap=6g', '--cpus=4', '--pids-limit=2048',
                         '--label=io.paper-vianden.session=true',
+                        '--env', 'PV_CLOCK_SPEED='+str(args.clock_speed),
+                        '--env', 'PV_SEED='+str(args.seed),
                         '--mount', 'type=bind,src='+str(library/'targets.tar.gz')+',dst=/library/targets.tar.gz,readonly',
                         'paper-vianden/envelope:local'], stdout=subprocess.DEVNULL)
         container_created = True
         command(DOCKER+['start', name], stdout=subprocess.DEVNULL)
         follower = subprocess.Popen(DOCKER+['logs', '--follow', name], env=ENV,
                                     preexec_fn=die_with_parent)
-        (RUNTIME/'active.json').write_text(json.dumps({'name': name, 'pid': os.getpid(),
-                                                      'source': manifest.get('source_revision')}))
         def ready():
             r = subprocess.run(DOCKER+['exec', name, 'test', '-f', '/tmp/paper-vianden-ready'],
                                env=ENV, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -253,10 +275,14 @@ def run_session(args):
                 raise RuntimeError('Envelope exited: '+detail+'\n'+logs)
             return r.returncode == 0
         wait_for(ready, processes, seconds=600)
+        session_info['state'] = 'ready'
+        save_session(session_info)
         print('Paper Vianden ready. Exit the shell to destroy this session.', flush=True)
         if args.check:
             command(DOCKER+['exec', name]+INNER+['exec', '-T', 'defender', 'python3',
-                    '/opt/paper-vianden/runtime/check.py'])
+                    '/opt/paper-vianden/runtime/check.py', '--activity'])
+            command(DOCKER+['exec', name]+INNER+['exec', '-T', 'scenario-runner', 'python3',
+                    '/opt/paper-vianden/runtime/scenario_runner.py', '--check'])
         else:
             join(args.role, name)
     except BaseException as error:
@@ -269,6 +295,8 @@ def run_session(args):
         # Ignore repeated terminal signals while destroying only this session.
         for sig in [signal.SIGHUP, signal.SIGINT, signal.SIGTERM]:
             signal.signal(sig, signal.SIG_IGN)
+        session_info['state'] = 'stopping'
+        save_session(session_info)
         cleanup_ok = True
         if container_created or (SOCKET.exists() and subprocess.run(
                 DOCKER+['inspect', name], env=ENV, stdout=subprocess.DEVNULL,
@@ -301,6 +329,23 @@ def run_session(args):
             raise RuntimeError('Cleanup needs administrator attention; the session disk was retained.')
 
 
+def scenario_seed(value):
+    try:
+        seed = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError('Seed must be an integer')
+    if not 0 <= seed <= 2**32-1:
+        raise argparse.ArgumentTypeError('Seed must be between 0 and 4294967295')
+    return seed
+
+
+def scenario_speed(value):
+    speed = float(value)
+    if not 1 <= speed <= 3600:
+        raise argparse.ArgumentTypeError('Clock speed must be between 1 and 3600')
+    return speed
+
+
 def main():
     inner = len(sys.argv) > 1 and sys.argv[1] == '_session'
     if inner:
@@ -312,6 +357,10 @@ def main():
     run = sub.add_parser('run', help='Start one foreground session; destroy it on exit')
     run.add_argument('--role', choices=['blue', 'red'], default='blue')
     run.add_argument('--check', action='store_true', help='Check services then destroy the session')
+    run.add_argument('--clock-speed', type=scenario_speed, default=1.0,
+                     help='Scenario seconds per real second, 1–3600 (default: 1)')
+    run.add_argument('--seed', type=scenario_seed, default=20260112,
+                     help='Reproducible behaviour variant, unsigned 32-bit integer')
     attach = sub.add_parser('join', help='Join the active session; never starts a range')
     attach.add_argument('--role', choices=['blue', 'red', 'control'], default='blue')
     sub.add_parser('status', help='Show session state without starting anything')
@@ -319,9 +368,14 @@ def main():
     args = parser.parse_args()
     if args.command == 'status':
         active = RUNTIME/'active.json'
-        running = subprocess.run(['/usr/bin/systemctl', 'is-active', '--quiet',
-                                  'paper-vianden-session.service']).returncode == 0
-        print(active.read_text() if running and active.exists() else ('Starting' if running else 'Stopped'))
+        if not unit_loaded():
+            print('Stopped')
+        else:
+            unit_state = capture(['/usr/bin/systemctl', 'show', '--property=ActiveState',
+                                  '--value', 'paper-vianden-session.service'])
+            phase = json.loads(active.read_text()).get('state', 'starting') if active.exists() else 'starting'
+            print('Stopping' if unit_state == 'deactivating' or phase == 'stopping'
+                  else 'Running' if phase == 'ready' else 'Starting')
         return
     if args.command == 'stop':
         trusted_install()

@@ -37,13 +37,28 @@ def main():
             run(['docker', 'tag', source['config_id'], alias])
         run(['python3', str(ROOT/'prototype/range'), 'init'])
         print('Starting the seeded service network...', flush=True)
-        run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--wait', '--wait-timeout', '180'])
+        run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--wait',
+                     '--wait-timeout', '180', '--scale', 'activity=0', '--scale', 'scenario-runner=0'])
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
                      '/opt/paper-vianden/runtime/initialise.py'])
         run(COMPOSE+['exec', '-T', 'defender', 'python3',
                      '/opt/paper-vianden/runtime/check.py'])
+        # Keep the target config editable by defenders; enable real SMB auth logs.
+        configure_samba = ("from pathlib import Path; p=Path('/etc/samba/smb.conf'); "
+                           "p.write_text(p.read_text().replace('[global]', "
+                           "'[global]\\n   log level = 1 auth_audit:3', 1))")
+        run(COMPOSE+['exec', '-T', 'file-01', 'python3', '-c', configure_samba])
+        run(COMPOSE+['exec', '-T', 'file-01', 'smbcontrol', 'all', 'reload-config'])
+        print('Starting simulated users and the intrusion storyline...', flush=True)
+        run(COMPOSE+['up', '-d', '--no-build', '--pull', 'never', '--no-deps',
+                     '--scale', 'activity=1', '--scale', 'scenario-runner=1',
+                     '--wait', '--wait-timeout', '120', 'activity', 'scenario-runner'])
+        run(COMPOSE+['exec', '-T', 'defender', 'python3',
+                     '/opt/paper-vianden/runtime/check.py', '--activity-only'])
+        run(COMPOSE+['exec', '-T', 'scenario-runner', 'python3',
+                     '/opt/paper-vianden/runtime/scenario_runner.py', '--check'])
         Path('/tmp/paper-vianden-ready').write_text('ready\n')
-        print(json.dumps({'event': 'ready', 'services': 22}), flush=True)
+        print(json.dumps({'event': 'ready', 'services': 25}), flush=True)
         while daemon.poll() is None:
             time.sleep(1)
         raise RuntimeError('Inner Docker stopped unexpectedly')

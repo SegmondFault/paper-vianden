@@ -55,6 +55,7 @@ def main():
         if path.is_symlink() or info.st_uid != 0 or info.st_mode & 0o022:
             raise SystemExit('Unsafe installation directory')
     record = store/'operator.json'
+    new_operator = False
     try:
         operator = pwd.getpwnam(args.account)
         if not record.exists() or json.loads(record.read_text())['account'] != args.account:
@@ -62,6 +63,7 @@ def main():
     except KeyError:
         run('useradd', '--create-home', '--user-group', '--shell', '/bin/bash', args.account)
         operator = pwd.getpwnam(args.account)
+        new_operator = True
     try:
         pwd.getpwnam('sysbox')
     except KeyError:
@@ -107,13 +109,25 @@ def main():
     launcher = Path('/usr/local/bin/paper-vianden')
     if launcher.exists() and not launcher.is_symlink(): raise SystemExit('Launcher path is occupied')
     launcher.unlink(missing_ok=True); launcher.symlink_to(current/'pv.py')
-    home = Path(operator.pw_dir); ssh = home/'.ssh'; ssh.mkdir(mode=0o700, exist_ok=True)
-    authorized = ssh/'authorized_keys'; authorized.write_text(public+'\n'); authorized.chmod(0o600)
-    os.chown(ssh, operator.pw_uid, operator.pw_gid); os.chown(authorized, operator.pw_uid, operator.pw_gid)
+    home = Path(operator.pw_dir)
+    if new_operator:
+        ssh = home/'.ssh'; ssh.mkdir(mode=0o700, exist_ok=True)
+        authorized = ssh/'authorized_keys'; authorized.write_text(public+'\n'); authorized.chmod(0o600)
+        os.chown(ssh, operator.pw_uid, operator.pw_gid); os.chown(authorized, operator.pw_uid, operator.pw_gid)
+    # Existing SSH access is operator-managed. Updates must not remove teammates.
     for name in ['start-range', 'join-range', 'stop-range', 'range-status']:
-        dest = home/name; shutil.copyfile(release/'scripts'/name, dest); dest.chmod(0o755)
+        with tempfile.NamedTemporaryFile(dir=home, prefix='.range-script-', delete=False) as staged:
+            pending_script = Path(staged.name)
+            with (release/'scripts'/name).open('rb') as source:
+                shutil.copyfileobj(source, staged)
+            os.fchmod(staged.fileno(), 0o755)
+        try:
+            # Replace a user-controlled destination link rather than following it.
+            pending_script.replace(home/name)
+        finally:
+            pending_script.unlink(missing_ok=True)
     rule = args.account+' ALL=(root) NOPASSWD: '+', '.join('/usr/local/bin/paper-vianden '+command for command in
-               ['run', 'run --role red', 'run --check', 'join', 'join --role red',
+               ['run', 'run --role red', 'run --check', 'run --clock-speed *', 'join', 'join --role red',
                 'join --role control', 'stop', 'status'])+'\n'
     with tempfile.NamedTemporaryFile(mode='w', prefix='paper-sudo-', delete=False) as temp:
         temp.write(rule); candidate = Path(temp.name)

@@ -27,5 +27,7 @@ Directory. There is no wireless hardware, industrial process, desktop Wireshark
 GUI or model runtime. Host ASLR remains enabled; the teaching binary is non-PIE.
 
 Applications are independent fixtures rather than one connected business
-application. No normal-user traffic generator, scoring engine or central
-traffic mirror is included. See [endpoints](users.md#find-the-services).
+application. The disposable runtime adds lightweight synthetic users and an
+inert, clock-scaled DNS-transfer storyline; see [scenario](users.md#simulated-users-and-storyline).
+No scoring engine or central traffic mirror is included.
+See [endpoints](users.md#find-the-services).
