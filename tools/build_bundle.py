@@ -64,10 +64,19 @@ def main():
     for filename, selected in [('targets.tar.gz', images), ('envelope.tar.gz', ['paper-vianden/envelope:local'])]:
         print('Saving', filename, flush=True)
         with gzip.open(out/filename, 'wb', compresslevel=1) as dest:
-            child = subprocess.Popen(docker+['save']+selected, cwd=ROOT, env=env, stdout=subprocess.PIPE)
+            child = subprocess.Popen(docker+['save', '--platform=linux/amd64']+selected,
+                                     cwd=ROOT, env=env, stdout=subprocess.PIPE)
             shutil.copyfileobj(child.stdout, dest, length=1024*1024)
             if child.wait():
                 raise RuntimeError('Image export failed')
+    # A containerd image store can hold multiple architectures under one tag.
+    # Check the exported configs, rather than trusting host defaults or tags.
+    with tarfile.open(out/'targets.tar.gz') as archive:
+        records = json.load(archive.extractfile('manifest.json'))
+        for record in records:
+            image = json.load(archive.extractfile(record['Config']))
+            if image.get('architecture') != 'amd64':
+                raise RuntimeError('Exported a non-amd64 target image')
     files = subprocess.check_output(['git', 'ls-files', '-z'], cwd=ROOT).split(b'\0')
     with tarfile.open(out/'source.tar.gz', 'w:gz') as archive:
         for raw in files:

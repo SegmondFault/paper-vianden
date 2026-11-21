@@ -47,6 +47,12 @@ def main():
         while daemon.poll() is None:
             time.sleep(1)
         raise RuntimeError('Inner Docker stopped unexpectedly')
+    except BaseException:
+        failed = subprocess.run(COMPOSE+['ps', '-a', '--status', 'exited', '--services'],
+                                cwd=ROOT, text=True, stdout=subprocess.PIPE)
+        for service in failed.stdout.split():
+            subprocess.run(COMPOSE+['logs', '--no-color', '--tail', '50', service], cwd=ROOT)
+        raise
     finally:
         if daemon.poll() is None:
             daemon.terminate()

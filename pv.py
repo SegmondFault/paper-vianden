@@ -323,6 +323,10 @@ def main():
         return
     if args.command == 'stop':
         trusted_install()
+        if capture(['/usr/bin/systemctl', 'show', '--property=LoadState', '--value',
+                    'paper-vianden-session.service']) == 'not-found':
+            print('Stopped')
+            return
         command(['/usr/bin/systemctl', 'stop', 'paper-vianden-session.service'])
         return
     if args.command == 'join':

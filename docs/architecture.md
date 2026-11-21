@@ -36,6 +36,7 @@ Power-loss recovery requires a separate reboot test; no reboot is performed.
 ## Boundaries
 
 The whole service has caps of 4 CPUs, 7 GiB RAM, zero swap and 4,096 tasks.
+A 5 GiB soft threshold reclaims file cache before it reaches the hard ceiling.
 The outer container has 6 GiB RAM and 2,048 tasks. Per-service caps and rotated
 logs add limits inside it. The filesystem bounds all mutable image, volume,
 upload and database growth together; sparse allocation grows with actual writes.

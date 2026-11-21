@@ -2,7 +2,7 @@
 
 ## Prepare a release
 
-Use a development Docker engine supporting Linux amd64, Git, Python 3.9+ and
+Use a development Docker 28+ engine supporting Linux amd64, Git, Python 3.9+ and
 modern Compose with `!reset` overlays. Build away from the shared server:
 
 ```sh

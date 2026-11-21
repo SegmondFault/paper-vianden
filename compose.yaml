@@ -1,5 +1,6 @@
 # Overlay on prototype/docker-compose.yml. Paths resolve from prototype/.
 x-lab: &lab
+  platform: linux/amd64
   init: true
   restart: "no"
   cpus: 0.25
@@ -13,25 +14,34 @@ x-lab: &lab
 
 services:
   web-01:
+    platform: linux/amd64
     image: paper-vianden/web-01:local
   vpn-gw-01:
+    platform: linux/amd64
     image: paper-vianden/vpn-gw-01:local
   db-01:
+    platform: linux/amd64
     image: paper-vianden/db-01:local
     volumes:
       - ../runtime/20-dvwa.sql:/docker-entrypoint-initdb.d/20-dvwa.sql:ro
   file-01:
+    platform: linux/amd64
     image: paper-vianden/file-01:local
   mail-01:
+    platform: linux/amd64
     image: paper-vianden/mail-01:local
   app-01:
+    platform: linux/amd64
     image: paper-vianden/app-01:local
   admin-01:
+    platform: linux/amd64
     image: paper-vianden/admin-01:local
   entry:
+    platform: linux/amd64
     image: paper-vianden/entry:local
     ports: !reset []
   defender:
+    platform: linux/amd64
     image: paper-vianden/toolbox:local
     build: {context: .., dockerfile: Dockerfile.labs, target: toolbox}
     mem_limit: 512m
